@@ -148,10 +148,10 @@ function mapWabaTemplate(raw: WabaTemplate): MessageTemplate {
   };
 }
 
-function authHeaders(token?: string): HeadersInit {
+function authHeaders(token?: string,apiKey?:string): HeadersInit {
   return {
     Accept: "application/json",
-    'D360-API-KEY':'YTXyPFwUr4m1A2J2RSb63NK1AK',
+    'D360-API-KEY':apiKey!,
     ...(token && { Authorization: `Bearer ${token}` }),
   };
 }
@@ -176,7 +176,6 @@ export interface TemplatesPageInfo {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const WABA_KEY = import.meta.env.WABA_KEY;
 
 // This hits your own backend, which should attach the D360-API-KEY header
 // server-side. Never send that key from the browser.
@@ -199,7 +198,7 @@ export function useTemplates() {
         const response = await fetch(
           `${TEMPLATES_ENDPOINT}?${params.toString()}`,
           {
-            headers: authHeaders(user?.token),
+            headers: authHeaders(user?.token,user?.whatsapp_api_key),
           }
         );
 

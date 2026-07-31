@@ -184,17 +184,17 @@ Price: order.items.reduce((total, item) => total + item?.totalPrice!, 0),
           icon={<MilestoneIcon className="h-4 w-4 text-red-500" />}
           // description="Orders with delivery errors"
         />
-        <StatCard
+        {/* <StatCard
           title={t.dashboard.remindersSent}
           value={isLoadingDashboard ? '...' : stats.totalSends}
           icon={<Send className="h-4 w-4" />}
           // description={t.dashboard.viaChannel}
-        />
+        /> */}
       </div>
            <div className="space-y-4">
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
-            <div className="relative w-full sm:w-72">
+            {/* <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={t.dashboard.searchCustomer}
@@ -202,8 +202,8 @@ Price: order.items.reduce((total, item) => total + item?.totalPrice!, 0),
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
               />
-            </div>
-            <Select value={status} onValueChange={(v: any) => setStatus(v)}>
+            </div> */}
+            {/* <Select value={status} onValueChange={(v: any) => setStatus(v)}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder={t.dashboard.status} />
               </SelectTrigger>
@@ -215,7 +215,7 @@ Price: order.items.reduce((total, item) => total + item?.totalPrice!, 0),
                   </SelectItem>
                 ))}
               </SelectContent>
-            </Select>
+            </Select> */}
             <div className="flex items-center gap-2">
               <Input
                 type="date"

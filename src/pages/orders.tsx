@@ -206,7 +206,7 @@ export default function OrdersPage() {
                     <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
                       <div className="flex items-center justify-center">
                         <RotateCcw className="h-5 w-5 animate-spin mr-2" />
-                        Loading orders...
+                        {t.orders.loading}
                       </div>
                     </td>
                   </tr>
@@ -233,7 +233,7 @@ export default function OrdersPage() {
                         <div>#{order.sallaOrderId}</div>
                         {order.referenceId && (
                           <div className="text-xs text-muted-foreground font-normal">
-                            Ref: {order.referenceId}
+                            {t.orders.reference}: {order.referenceId}
                           </div>
                         )}
                       </td>
@@ -272,8 +272,8 @@ export default function OrdersPage() {
         {ordersPage && ordersPage.totalElements > 0 && (
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <div>
-              Showing page {ordersPage.page} of {ordersPage.totalPages} ·{' '}
-              {ordersPage.totalElements} total orders
+              {t.orders.showingPage} {ordersPage.page} of {ordersPage.totalPages} ·{' '}
+              {ordersPage.totalElements} {t.orders.totalOrders}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -303,36 +303,30 @@ export default function OrdersPage() {
         <DialogContent className="sm:max-w-[560px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <span>Order #{selectedOrder?.sallaOrderId || '...'}</span>
+              <span>{t.orders.orderNumber} #{selectedOrder?.sallaOrderId || '...'}</span>
             </DialogTitle>
           </DialogHeader>
           {selectedOrder ? (
             <div className="space-y-6 mt-4">
               <div className="flex justify-between items-start p-4 bg-muted/30 rounded-lg border border-border">
                 <div>
-                  <p className="text-sm text-muted-foreground">Order Total</p>
+                  <p className="text-sm text-muted-foreground">{t.orders.total}</p>
                   <p className="text-3xl font-mono font-bold mt-1">
                     {formatCurrency(selectedOrder.total)}
                   </p>
                   {selectedOrder.referenceId && (
                     <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                       <Hash className="h-3 w-3" />
-                      Reference: {selectedOrder.referenceId}
+                      {t.orders.reference}: {selectedOrder.referenceId}
                     </p>
                   )}
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Store</p>
-                  <div className="mt-1 flex justify-end items-center gap-1.5 font-medium">
-                    <Store className="h-3.5 w-3.5 text-muted-foreground" />#
-                    {selectedOrder.installedStoreId}
-                  </div>
-                </div>
+        
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-muted-foreground mb-1">Customer</p>
+                  <p className="text-muted-foreground mb-1">{t.orders.customer}</p>
                   <div className="font-medium">{selectedOrder.customerName}</div>
                   {selectedOrder.customerMobile && (
                     <div className="text-xs text-muted-foreground" dir="ltr">
@@ -341,7 +335,7 @@ export default function OrdersPage() {
                   )}
                 </div>
                 <div>
-                  <p className="text-muted-foreground mb-1">Created On</p>
+                  <p className="text-muted-foreground mb-1">{t.orders.createdOn}</p>
                   <p className="font-medium flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                     {format(new Date(selectedOrder.createdAt), 'PPp')}
@@ -351,7 +345,7 @@ export default function OrdersPage() {
 
               <div>
                 <p className="text-muted-foreground mb-2 text-sm">
-                  Items{selectedOrder.items ? ` (${selectedOrder.items.length})` : ''}
+                  {t.orders.items}{selectedOrder.items ? ` (${selectedOrder.items.length})` : ''}
                 </p>
                 <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
                   {selectedOrder.items && selectedOrder.items.length > 0 ? (
@@ -374,7 +368,7 @@ export default function OrdersPage() {
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {item.sku ? `SKU: ${item.sku} · ` : ''}
-                            Qty {item.quantity} × {formatCurrency(item.unitPrice)}
+                            {t.orders.qty} * {item.totalPrice}
                           </p>
                         </div>
                         <div className="font-mono font-semibold text-sm shrink-0">
@@ -384,7 +378,7 @@ export default function OrdersPage() {
                     ))
                   ) : (
                     <div className="p-4 text-center text-sm text-muted-foreground">
-                      No line items for this order
+                      {t.orders.noLineItems}
                     </div>
                   )}
                 </div>

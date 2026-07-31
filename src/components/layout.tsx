@@ -44,13 +44,13 @@ const navigation = [
     exact: false,
     
   },
-      {
-    name: t.nav.campaigns,
-    href: '/campaigns',
-    icon: Telescope,
-    exact: false,
+  //     {
+  //   name: t.nav.campaigns,
+  //   href: '/campaigns',
+  //   icon: Telescope,
+  //   exact: false,
     
-  },
+  // },
           {
           name: t.nav.reminderRules,
           href: '/reminder-rules',

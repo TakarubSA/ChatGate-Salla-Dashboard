@@ -10,6 +10,7 @@ export interface AuthUser {
   role: TeamRole;
   token: string;
   installedStoreId?:number
+  whatsapp_api_key?:string
 }
 
 export type LoginError =
@@ -75,7 +76,6 @@ export function AuthProvider({
           }),
         }
       );
-console.log('response')
       console.log(JSON.stringify(response))
 
       if (!response.ok) {
@@ -95,7 +95,8 @@ console.log('response')
         email: data.username,
         role: data.role as TeamRole,
         token: data.token,
-        installedStoreId:data?.installedStoreId
+        installedStoreId:data?.installedStoreId,
+        whatsapp_api_key:data?.whatsapp_api_key
       };
 
       setUser(authUser);

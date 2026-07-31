@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { useAuth } from "./use-auth";
 import { Campaign, CampaignStatus, CampaignStats } from "@/types/campaigns.types";
+import { useTemplates } from "./use-template";
 
 // ---- Raw shape returned by GET /campaigns ----
 export interface CampaignsApiResponse {
@@ -77,9 +78,13 @@ function reduceTemplateAnalytics(entry: TemplateAnalyticsEntry): Partial<Campaig
   return stats;
 }
 
-function authHeaders(token?: string): HeadersInit {
+// Mirrors useTemplates.ts's authHeaders: attaches D360-API-KEY for endpoints
+// that proxy 360dialog directly (template_analytics), same as the templates
+// endpoint does.
+function authHeaders(token?: string, apiKey?: string): HeadersInit {
   return {
     Accept: "application/json",
+    "D360-API-KEY": apiKey!,
     ...(token && { Authorization: `Bearer ${token}` }),
   };
 }
@@ -117,6 +122,19 @@ export function useCampaigns() {
   const [pageInfo, setPageInfo] = useState<CampaignsPageInfo | null>(null);
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
 
+  // Composed rather than duplicated — reuses the existing fetch/mapping
+  // logic (and the 360dialog header handling) from useTemplates so campaign
+  // creation UIs can pick a template without a second implementation to
+  // keep in sync.
+  const {
+    templates,
+    pageInfo: templatesPageInfo,
+    isLoadingTemplates,
+    loadTemplates,
+    hasNextPage: templatesHasNextPage,
+    hasPrevPage: templatesHasPrevPage,
+  } = useTemplates();
+
   const loadCampaigns = useCallback(
     async ({ offset = 0, limit = 20 }: GetCampaignsRequest = {}) => {
       try {
@@ -126,7 +144,7 @@ export function useCampaigns() {
         params.append("offset", String(offset));
 
         const response = await fetch(`${CAMPAIGNS_ENDPOINT}?${params.toString()}`, {
-          headers: authHeaders(user?.token),
+          headers: authHeaders(user?.token, user?.whatsapp_api_key),
         });
 
         if (!response.ok) {
@@ -151,11 +169,11 @@ export function useCampaigns() {
         setIsLoadingCampaigns(false);
       }
     },
-    [user?.token]
+    [user?.token, user?.whatsapp_api_key]
   );
 
   // Creates a campaign via the backend. Throws on failure so callers can
-  // handle the error (e.g. show a toast) — does not touch `campaigns` state
+  // handle the error (e.g. show a toast) — does not touch campaigns state
   // directly; call loadCampaigns() afterwards to refresh the list.
   const createCampaign = useCallback(
     async (payload: CreateCampaignRequest) => {
@@ -164,9 +182,11 @@ export function useCampaigns() {
         headers: jsonAuthHeaders(user?.token),
         body: JSON.stringify(payload),
       });
+
       if (!response.ok) {
         throw new Error(await response.text());
       }
+
       return (await response.json()) as CreateCampaignResponse;
     },
     [user?.token]
@@ -177,11 +197,13 @@ export function useCampaigns() {
     async (id: string) => {
       const response = await fetch(`${CAMPAIGNS_ENDPOINT}/${id}`, {
         method: "DELETE",
-        headers: authHeaders(user?.token),
+        headers: authHeaders(user?.token, user?.whatsapp_api_key),
       });
+
       if (!response.ok) {
         throw new Error(await response.text());
       }
+
       setCampaigns((prev) => prev.filter((c) => c.id !== id));
       setPageInfo((prev) =>
         prev
@@ -193,7 +215,7 @@ export function useCampaigns() {
           : prev
       );
     },
-    [user?.token]
+    [user?.token, user?.whatsapp_api_key]
   );
 
   // Fetches delivered/read/sent/failed counts for one or more templates from
@@ -203,7 +225,7 @@ export function useCampaigns() {
   //
   // Note: that backend route is a GET expecting a JSON body, but the Fetch
   // spec forbids a body on GET requests in the browser, so the payload is
-  // JSON-encoded into a `query` search param instead. MerchantController
+  // JSON-encoded into a query search param instead. MerchantController
   // needs a matching @QueryParam("query") fallback for this to work.
   const refreshCampaignAnalytics = useCallback(
     async (templateIds: string[], options?: Omit<TemplateAnalyticsRequest, "template_ids">) => {
@@ -219,7 +241,7 @@ export function useCampaigns() {
         params.append("query", JSON.stringify(payload));
 
         const response = await fetch(`${TEMPLATE_ANALYTICS_ENDPOINT}?${params.toString()}`, {
-          headers: authHeaders(user?.token),
+          headers: authHeaders(user?.token, user?.whatsapp_api_key),
         });
 
         if (!response.ok) {
@@ -245,7 +267,7 @@ export function useCampaigns() {
         return new Map<string, Partial<CampaignStats>>();
       }
     },
-    [user?.token]
+    [user?.token, user?.whatsapp_api_key]
   );
 
   const clear = useCallback(() => {
@@ -267,5 +289,12 @@ export function useCampaigns() {
     deleteCampaign,
     refreshCampaignAnalytics,
     clear,
+    // Templates, exposed for campaign-creation flows (e.g. a template picker).
+    templates,
+    templatesPageInfo,
+    isLoadingTemplates,
+    loadTemplates,
+    templatesHasNextPage,
+    templatesHasPrevPage,
   };
 }
