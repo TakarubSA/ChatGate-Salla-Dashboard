@@ -617,7 +617,7 @@ export const translations = {
       logout: 'تسجيل الخروج',
     },
     dashboard: {
-      title: 'السلات المتروكة',
+      title: 'لوحة التحكم',
       subtitle: 'راقب الإيرادات المفقودة واستعدها.',
       totalAbandoned: 'إجمالي السلات المتروكة',
       cartsInLast30Days: 'سلات خلال آخر 30 يومًا',

@@ -48,13 +48,13 @@ export default function AbandonCartsPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
   const { user } = useAuth();
-  const { carts, isLoading, loadCarts, sendReminder } = useMerchant();
+  const { carts, cartsPage, isLoading, loadCarts, sendReminder } = useMerchant();
 
   const [selectedCartIds, setSelectedCartIds] = useState<string[]>([]);
   const [selectedCartId, setSelectedCartId] = useState<string | null>(null);
 
-  const [startDate, setStartDate] = useState('2026-07-01');
-  const [endDate, setEndDate] = useState('2026-07-31');
+  const [startDate, setStartDate] = useState();
+  const [endDate, setEndDate] = useState();
   const [page, setPage] = useState(1);
 
   // Dialog-driven reminder sending — target cart ids + coupon are set together
@@ -154,6 +154,7 @@ export default function AbandonCartsPage() {
     }
   };
 
+  
   const handleExport = () => {
     exportToExcel(
       (carts ?? []).map((cart) => ({
@@ -175,6 +176,22 @@ export default function AbandonCartsPage() {
       description: t.abandonedCarts.exportSuccessDescription,
     });
   };
+
+
+const handleResetFilters = () => {
+  setStartDate('');
+  setEndDate('');
+  setSelectedCartIds([]);
+  setPage(1);
+
+  if (!user) return;
+
+  loadCarts({
+    merchantId: user.merchantId,
+    page: 1,
+    size: PAGE_SIZE,
+  });
+};
 
   const getStatusBadge = (status: AbandonedCart['status']) => {
     switch (status) {
@@ -261,10 +278,17 @@ export default function AbandonCartsPage() {
               </div>
             </div>
 
-            <Button onClick={handleLoad}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              {t.abandonedCarts.loadCarts}
-            </Button>
+      <div className="flex gap-2">
+  <Button variant="outline" onClick={handleResetFilters}>
+    <X className="h-4 w-4 mr-2" />
+    {t.common.reset ?? 'Reset'}
+  </Button>
+
+  <Button onClick={handleLoad}>
+    <RotateCcw className="h-4 w-4 mr-2" />
+    {t.abandonedCarts.loadCarts}
+  </Button>
+</div>
           </div>
         </CardContent>
       </Card>
@@ -424,8 +448,14 @@ export default function AbandonCartsPage() {
             <Button
               variant="outline"
               size="sm"
-              disabled={carts.length < PAGE_SIZE || isLoading}
-              onClick={() => setPage((p) => p + 1)}
+              disabled={
+                isLoading ||
+                (cartsPage ? page >= cartsPage.totalPages : carts.length < PAGE_SIZE)
+              }
+              onClick={() =>{
+                console.log(page, cartsPage?.totalPages, carts.length, PAGE_SIZE)
+                 setPage((p) => p + 1)
+              }}
             >
               {t.abandonedCarts.next}
               <ChevronRight className="h-4 w-4 ml-1" />

@@ -1,6 +1,14 @@
-import { useEffect, useMemo } from 'react';
-import { FileText, ImageIcon, Loader2, MessageSquare, Save } from 'lucide-react';
-import { useForm, type FieldErrors, type Resolver } from 'react-hook-form';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  FileText,
+  ImageIcon,
+  Loader2,
+  MessageSquare,
+  Save,
+  Upload,
+  X,
+} from 'lucide-react';
+import { useForm, type ControllerRenderProps, type FieldErrors, type Resolver } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -85,6 +93,151 @@ const headerFormatIcons: Partial<Record<TemplateHeaderFormat, typeof ImageIcon>>
   VIDEO: MessageSquare,
   DOCUMENT: FileText,
 };
+
+const CLOUDINARY_CLOUD_NAME ="timaks7n";
+const CLOUDINARY_UPLOAD_PRESET = "web_uploads";
+
+async function uploadToCloudinary(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`,
+    { method: 'POST', body: formData },
+  );
+
+  if (!response.ok) {
+    throw new Error('Upload to Cloudinary failed.');
+  }
+
+  const data = await response.json();
+  return data.secure_url as string;
+}
+
+// ---------------------------------------------------------------------------
+// Header media field (file picker + Cloudinary upload + preview)
+// ---------------------------------------------------------------------------
+
+interface HeaderMediaFieldProps {
+  field: ControllerRenderProps<TemplateFormValues, 'header.mediaUrl'>;
+  format: TemplateHeaderFormat;
+  icon: typeof ImageIcon;
+  disabled?: boolean;
+  labels: {
+    sampleMedia: string;
+    chooseFile: string;
+    remove: string;
+    uploading: string;
+    urlPlaceholder: string;
+  };
+}
+
+function HeaderMediaField({
+  field,
+  format,
+  icon: Icon,
+  disabled,
+  labels,
+}: HeaderMediaFieldProps) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const inputId = 'header-media-file-input';
+
+  const acceptTypes =
+    format === 'IMAGE' ? 'image/*' : format === 'VIDEO' ? 'video/*' : '.pdf,.doc,.docx';
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // reset so selecting the same file twice still fires onChange
+    event.target.value = '';
+    if (!file) return;
+
+    setUploadError(null);
+    setIsUploading(true);
+    try {
+      const secureUrl = await uploadToCloudinary(file);
+      field.onChange(secureUrl);
+    } catch (error) {
+      setUploadError(
+        error instanceof Error ? error.message : 'Upload failed. Please try again.',
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  return (
+    <FormItem>
+      <FormLabel>{labels.sampleMedia}</FormLabel>
+      <div className="flex items-center gap-3">
+        <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted text-muted-foreground">
+          {isUploading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : format === 'IMAGE' && field.value ? (
+            <img src={field.value} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <Icon className="h-5 w-5" />
+          )}
+        </div>
+        <div className="flex flex-1 flex-col gap-2">
+          <input
+            id={inputId}
+            type="file"
+            accept={acceptTypes}
+            className="hidden"
+            onChange={handleFileChange}
+            disabled={disabled || isUploading}
+          />
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={disabled || isUploading}
+              onClick={() => document.getElementById(inputId)?.click()}
+            >
+              {isUploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              {isUploading ? labels.uploading : labels.chooseFile}
+            </Button>
+            {field.value && !isUploading && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => field.onChange('')}
+              >
+                <X className="h-4 w-4" />
+                {labels.remove}
+              </Button>
+            )}
+          </div>
+          <FormControl>
+            <Input
+              {...field}
+              inputMode="url"
+              placeholder={labels.urlPlaceholder}
+              disabled={isUploading}
+            />
+          </FormControl>
+          {uploadError && (
+            <p className="text-xs font-medium text-destructive">{uploadError}</p>
+          )}
+        </div>
+      </div>
+      <FormMessage />
+    </FormItem>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TemplateBuilder
+// ---------------------------------------------------------------------------
 
 export interface TemplateBuilderProps {
   open: boolean;
@@ -390,27 +543,21 @@ export function TemplateBuilder({
                         control={form.control}
                         name="header.mediaUrl"
                         render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              {t.templates?.sampleMediaUrl ?? 'Sample media URL'}
-                            </FormLabel>
-                            <div className="flex gap-2">
-                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground">
-                                <HeaderMediaIcon className="h-4 w-4" />
-                              </div>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  inputMode="url"
-                                  placeholder={
-                                    t.templates?.sampleMediaUrlPlaceholder ??
-                                    'https://example.com/header.jpg'
-                                  }
-                                />
-                              </FormControl>
-                            </div>
-                            <FormMessage />
-                          </FormItem>
+                          <HeaderMediaField
+                            field={field}
+                            format={selectedHeaderFormat}
+                            icon={HeaderMediaIcon}
+                            disabled={isBusy}
+                            labels={{
+                              sampleMedia: t.templates?.sampleMedia ?? 'Sample media',
+                              chooseFile: t.templates?.chooseFile ?? 'Choose file',
+                              remove: t.templates?.remove ?? 'Remove',
+                              uploading: t.templates?.uploading ?? 'Uploading…',
+                              urlPlaceholder:
+                                t.templates?.sampleMediaUrlPlaceholder ??
+                                'https://example.com/header.jpg',
+                            }}
+                          />
                         )}
                       />
                     )}

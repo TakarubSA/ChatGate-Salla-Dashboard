@@ -34,6 +34,7 @@ function authHeaders(token?: string): HeadersInit {
     ...(token && { Authorization: `Bearer ${token}` }),
   };
 }
+
 export interface OrderItem {
   id: number;
   orderId: number;
@@ -57,7 +58,6 @@ export interface Order {
   total: number;
   installedStoreId: number | null;
   createdAt: string;
-
   items: OrderItem[];
 }
 
@@ -76,12 +76,14 @@ export interface GetMerchantCartsRequest {
   merchantId: number;
   startDate: string;
   endDate: string;
+  page?: number;
+  size?: number;
 }
 
 export interface GetMerchantOrdersRequest {
   merchantId: number;
-  startDate: string;
-  endDate: string;
+  startDate?: string;
+  endDate?: string;
   page?: number;
   size?: number;
 }
@@ -93,6 +95,7 @@ export interface PagedResponse<T> {
   totalElements: number;
   totalPages: number;
 }
+
 export interface SendReminderRequest {
   merchantId: number;
   cartIds: string[];
@@ -101,20 +104,18 @@ export interface SendReminderRequest {
 
 interface MerchantContextType {
   carts: AbandonedCart[];
+  cartsPage: PagedResponse<AbandonedCart> | null;
   isLoading: boolean;
   loadCarts: (
     request: GetMerchantCartsRequest
-  ) => Promise<AbandonedCart[]>;
+  ) => Promise<PagedResponse<AbandonedCart> | null>;
   orders: Order[];
   isLoadingOrders: boolean;
-ordersPage: PagedResponse<Order> | null;
-sendReminder: (
-  request: SendReminderRequest
-) => Promise<boolean>;
-
-loadOrders: (
-  request: GetMerchantOrdersRequest
-) => Promise<PagedResponse<Order> | null>;
+  ordersPage: PagedResponse<Order> | null;
+  sendReminder: (request: SendReminderRequest) => Promise<boolean>;
+  loadOrders: (
+    request: GetMerchantOrdersRequest
+  ) => Promise<PagedResponse<Order> | null>;
   dashboard: MerchantDashboard | null;
   isLoadingDashboard: boolean;
   loadDashboard: (
@@ -136,26 +137,24 @@ export function MerchantProvider({
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const [carts, setCarts] = useState<AbandonedCart[]>([]);
+  const [cartsPage, setCartsPage] = useState<PagedResponse<AbandonedCart> | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(false);
 
-const [orders, setOrders] = useState<Order[]>([]);
-const [ordersPage, setOrdersPage] =
-  useState<PagedResponse<Order> | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersPage, setOrdersPage] = useState<PagedResponse<Order> | null>(
+    null
+  );
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
 
   const [dashboard, setDashboard] = useState<MerchantDashboard | null>(null);
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
 
   const sendReminder = useCallback(
-  async ({
-    merchantId,
-    cartIds,
-    couponCode = "",
-  }: SendReminderRequest) => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/merchant/notifications`,
-        {
+    async ({ merchantId, cartIds, couponCode = "" }: SendReminderRequest) => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/merchant/notifications`, {
           method: "POST",
           headers: authHeaders(user?.token),
           body: JSON.stringify({
@@ -163,34 +162,43 @@ const [ordersPage, setOrdersPage] =
             cartIds,
             couponCode,
           }),
+        });
+
+        if (!response.ok) {
+          throw new Error(await response.text());
         }
-      );
 
-      if (!response.ok) {
-        throw new Error(await response.text());
+        return true;
+      } catch (error) {
+        console.error(error);
+        return false;
       }
-
-      return true;
-    } catch (error) {
-      console.error(error);
-      return false;
-    }
-  },
-  [API_BASE_URL, user?.token]
-);
+    },
+    [API_BASE_URL, user?.token]
+  );
 
   const loadCarts = useCallback(
     async ({
       merchantId,
       startDate,
       endDate,
+      page = 1,
+      size = 20,
     }: GetMerchantCartsRequest) => {
       try {
         setIsLoading(true);
+
         const params = new URLSearchParams();
         params.append("merchantId", merchantId.toString());
-        params.append("startDate", startDate);
-        params.append("endDate", endDate);
+        if (startDate) {
+          params.append("startDate", startDate);
+        }
+        if (endDate) {
+          params.append("endDate", endDate);
+        }
+        params.append("page", page.toString());
+        params.append("size", size.toString());
+
         const response = await fetch(
           `${API_BASE_URL}/merchant/carts?${params.toString()}`,
           {
@@ -202,94 +210,133 @@ const [ordersPage, setOrdersPage] =
             },
           }
         );
+
         console.log("Response status:", response.status);
+
         if (!response.ok) {
           throw new Error(await response.text());
         }
-        const data = (await response.json()) as AbandonedCart[];
-        setCarts(data);
-        return data;
+
+        const raw = await response.json();
+
+   
+
+        let result: PagedResponse<AbandonedCart>;
+        if (Array.isArray(raw)) {
+          const hasFullPage = raw.length === size;
+          result = {
+            content: raw,
+            page,
+            size,
+            totalElements: hasFullPage
+              ? page * size + 1
+              : (page - 1) * size + raw.length,
+            totalPages: hasFullPage ? page + 1 : page,
+          };
+        } else {
+          result = raw as PagedResponse<AbandonedCart>;
+        }
+
+        setCarts(result.content ?? []);
+        setCartsPage(result);
+        return result;
       } catch (error) {
         console.error(error);
         setCarts([]);
-        return [];
+        setCartsPage(null);
+        return null;
       } finally {
         setIsLoading(false);
       }
     },
-    [user?.token]
+    [API_BASE_URL, user?.token]
   );
 
-const loadOrders = useCallback(
-  async ({
-    merchantId,
-    startDate,
-    endDate,
-    page = 1,
-    size = 20,
-  }: GetMerchantOrdersRequest) => {
-    try {
-      setIsLoadingOrders(true);
-
-      const params = new URLSearchParams();
-
-      params.append("merchantId", merchantId.toString());
-      // params.append("startDate", startDate);
-      // params.append("endDate", endDate);
-      // params.append("page", page.toString());
-      // params.append("size", size.toString());
-
-
-const response = await fetch(
-  `${API_BASE_URL}/orders?${params.toString()}`,
-  {
-    headers: authHeaders(user?.token),
-  }
-);
-
-if (!response.ok) {
-  throw new Error(await response.text());
-}
-
-const data = (await response.json()) as Order[];
-
-console.log(data);
-
-setOrders(data);
-
-return {
-  content: data,
-  page: 1,
-  size: data.length,
-  totalElements: data.length,
-  totalPages: 1,
-};
-    } catch (error) {
-      console.error(error);
-
-      setOrders([]);
-      setOrdersPage(null);
-
-      return null;
-    } finally {
-      setIsLoadingOrders(false);
-    }
-  },
-  [API_BASE_URL, user?.token]
-);
-
-  const loadDashboard = useCallback(
+  const loadOrders = useCallback(
     async ({
       merchantId,
       startDate,
       endDate,
-    }: GetMerchantCartsRequest) => {
+      page = 1,
+      size = 20,
+    }: GetMerchantOrdersRequest) => {
+      try {
+        setIsLoadingOrders(true);
+
+        const params = new URLSearchParams();
+        params.append("merchantId", merchantId.toString());
+        if (startDate) {
+          params.append("startDate", startDate);
+        }
+        if (endDate) {
+          params.append("endDate", endDate);
+        }
+        params.append("page", page.toString());
+        params.append("size", size.toString());
+
+        const response = await fetch(
+          `${API_BASE_URL}/merchant/orders?${params.toString()}`,
+          {
+            headers: {
+              Accept: "application/json",
+              ...(user?.token && {
+                Authorization: `Bearer ${user.token}`,
+              }),
+            },
+          }
+        );
+
+        console.log("Response status:", response.status);
+
+        if (!response.ok) {
+          throw new Error(await response.text());
+        }
+
+        const raw = await response.json();
+
+        console.log({raw})
+
+        let result: PagedResponse<Order>;
+        if (Array.isArray(raw)) {
+          const hasFullPage = raw.length === size;
+          result = {
+            content: raw,
+            page,
+            size,
+            totalElements: hasFullPage
+              ? page * size + 1
+              : (page - 1) * size + raw.length,
+            totalPages: hasFullPage ? page + 1 : page,
+          };
+        } else {
+          result = raw as PagedResponse<Order>;
+        }
+
+        setOrders(result.content ?? []);
+        setOrdersPage(result);
+        return result;
+      } catch (error) {
+        console.error(error);
+        setOrders([]);
+        setOrdersPage(null);
+        return null;
+      } finally {
+        setIsLoadingOrders(false);
+      }
+    },
+    [API_BASE_URL, user?.token]
+  );
+
+  const loadDashboard = useCallback(
+    async ({ merchantId, startDate, endDate }: GetMerchantCartsRequest) => {
       try {
         setIsLoadingDashboard(true);
+
         const params = new URLSearchParams();
         params.append("merchantId", merchantId.toString());
         params.append("startDate", startDate);
         params.append("endDate", endDate);
+
         const response = await fetch(
           `${API_BASE_URL}/merchant/dashboard?${params.toString()}`,
           {
@@ -301,10 +348,13 @@ return {
             },
           }
         );
+
         console.log("Response status:", response.status);
+
         if (!response.ok) {
           throw new Error(await response.text());
         }
+
         const data = (await response.json()) as MerchantDashboard;
         setDashboard(data);
         return data;
@@ -316,37 +366,35 @@ return {
         setIsLoadingDashboard(false);
       }
     },
-    [user?.token]
+    [API_BASE_URL, user?.token]
   );
 
-const clear = useCallback(() => {
-  setCarts([]);
-  setOrders([]);
-  setOrdersPage(null);
-  setDashboard(null);
-}, []);
+  const clear = useCallback(() => {
+    setCarts([]);
+    setCartsPage(null);
+    setOrders([]);
+    setOrdersPage(null);
+    setDashboard(null);
+  }, []);
 
   return (
-<MerchantContext.Provider
-  value={{
-    carts,
-    isLoading,
-    loadCarts,
-
-    orders,
-    ordersPage,
-    isLoadingOrders,
-    loadOrders,
-
-    dashboard,
-    isLoadingDashboard,
-    loadDashboard,
-
-    sendReminder,
-
-    clear,
-  }}
->
+    <MerchantContext.Provider
+      value={{
+        carts,
+        cartsPage,
+        isLoading,
+        loadCarts,
+        orders,
+        ordersPage,
+        isLoadingOrders,
+        loadOrders,
+        dashboard,
+        isLoadingDashboard,
+        loadDashboard,
+        sendReminder,
+        clear,
+      }}
+    >
       {children}
     </MerchantContext.Provider>
   );
@@ -355,9 +403,7 @@ const clear = useCallback(() => {
 export function useMerchant() {
   const context = useContext(MerchantContext);
   if (!context) {
-    throw new Error(
-      "useMerchant must be used within a MerchantProvider"
-    );
+    throw new Error("useMerchant must be used within a MerchantProvider");
   }
   return context;
 }

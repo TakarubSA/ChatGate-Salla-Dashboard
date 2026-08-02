@@ -3,7 +3,7 @@
 // Reads from env if present, falls back to localhost for local dev.
 // Set VITE_API_BASE_URL in your .env / .env.production to override.
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+  import.meta.env.VITE_API_BASE_URL
 
 export const API_ENDPOINTS = {
   merchantOrders: `${API_BASE_URL}/salla/api/merchant/orders`,

@@ -13,13 +13,12 @@ import {
   ShoppingCart,
   RotateCcw,
   Clock,
-  Search,
   Calendar,
-  Store,
   Hash,
   Package,
   ChevronLeft,
   ChevronRight,
+  MoreHorizontal,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { exportToExcel } from '@/lib/export-excel';
@@ -29,18 +28,56 @@ import { useLanguage } from '@/hooks/use-language';
 
 const PAGE_SIZE = 20;
 
+// Builds a page-number list with ellipses, e.g.
+// [1, '...', 4, 5, 6, '...', 42] instead of showing every page.
+function buildPageWindow(current: number, total: number): (number | 'ellipsis')[] {
+  const siblingCount = 1;
+  const totalNumbersShown = siblingCount * 2 + 5; // first, last, current, 2 siblings, 2 ellipses
+
+  if (total <= totalNumbersShown) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+
+  const leftSibling = Math.max(current - siblingCount, 1);
+  const rightSibling = Math.min(current + siblingCount, total);
+
+  const showLeftEllipsis = leftSibling > 2;
+  const showRightEllipsis = rightSibling < total - 1;
+
+  const pages: (number | 'ellipsis')[] = [1];
+
+  if (showLeftEllipsis) {
+    pages.push('ellipsis');
+  } else {
+    for (let p = 2; p < leftSibling; p++) pages.push(p);
+  }
+
+  for (let p = leftSibling; p <= rightSibling; p++) {
+    if (p !== 1 && p !== total) pages.push(p);
+  }
+
+  if (showRightEllipsis) {
+    pages.push('ellipsis');
+  } else {
+    for (let p = rightSibling + 1; p < total; p++) pages.push(p);
+  }
+
+  pages.push(total);
+
+  return pages;
+}
+
 export default function OrdersPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { orders, ordersPage, loadOrders, isLoadingOrders } = useMerchant();
-
-  console.log({orders})
-  const [search, setSearch] = useState('');
-  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
-  const [startDate, setStartDate] = useState('2026-07-01');
-  const [endDate, setEndDate] = useState('2026-07-31');
-  const [page, setPage] = useState(1);
   const { t } = useLanguage();
+
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [startDate, setStartDate] = useState();
+  const [endDate, setEndDate] = useState();
+  const [page, setPage] = useState(1);
+
   const fetchPage = (targetPage: number) => {
     if (!user?.merchantId) return;
     loadOrders({
@@ -57,8 +94,6 @@ export default function OrdersPage() {
     fetchPage(1);
   };
 
-  console.log({user})
-
   useEffect(() => {
     if (!user?.merchantId) return;
     fetchPage(1);
@@ -67,31 +102,24 @@ export default function OrdersPage() {
 
   const goToPage = (targetPage: number) => {
     if (targetPage < 1 || (ordersPage && targetPage > ordersPage.totalPages)) return;
+    if (targetPage === page) return;
     setPage(targetPage);
     fetchPage(targetPage);
   };
 
-  const filteredOrders = useMemo(() => {
-    if (!orders) return [];
-    const q = search.trim().toLowerCase();
-    if (!q) return orders;
-    return orders.filter(
-      (order: Order) =>
-        order.customerName?.toLowerCase().includes(q) ||
-        order.customerMobile?.toLowerCase().includes(q) ||
-        order.sallaOrderId?.toLowerCase().includes(q) ||
-        order.referenceId?.toLowerCase().includes(q)
-    );
-  }, [orders, search]);
+  const pageWindow = useMemo(
+    () => (ordersPage ? buildPageWindow(page, ordersPage.totalPages) : []),
+    [page, ordersPage]
+  );
 
   const selectedOrder: Order | undefined = useMemo(
-    () => orders.find((o: Order) => o.id === selectedOrderId),
+    () => (orders ?? []).find((o: Order) => o.id === selectedOrderId),
     [orders, selectedOrderId]
   );
 
   const handleExport = () => {
     exportToExcel(
-      orders.map((order: Order) => ({
+      (orders ?? []).map((order: Order) => ({
         Id: order.id,
         SallaOrderId: order.sallaOrderId,
         ReferenceId: order.referenceId,
@@ -118,23 +146,24 @@ export default function OrdersPage() {
     }).format(amount || 0);
   };
 
-
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
-          {<h1>{t.orders.title}</h1>}
+            {t.orders.title}
           </h1>
-          <p className="text-muted-foreground mt-1">
-           <p>{t.orders.pageSubtitle}</p>
-
-          </p>
+          <p className="text-muted-foreground mt-1">{t.orders.pageSubtitle}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExport} title="Exports the currently loaded page only">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            title="Exports the currently loaded page only"
+          >
             <FileSpreadsheet className="h-4 w-4 mr-2" />
-             {t.orders.exportPage}
+            {t.orders.exportPage}
           </Button>
         </div>
       </div>
@@ -155,7 +184,7 @@ export default function OrdersPage() {
               </div>
             </div>
             <div className="space-y-1">
-            <label>{t.orders.endDate}</label>
+              <label>{t.orders.endDate}</label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -166,26 +195,10 @@ export default function OrdersPage() {
                 />
               </div>
             </div>
-            {/* <div className="space-y-1">
-              <label className="text-sm font-medium text-muted-foreground">
-                {t.common}
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Customer, mobile, order id..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 w-full sm:w-[220px]"
-                />
-              </div>
-            </div> */}
           </div>
-       <Button>
-  {isLoadingOrders
-    ? t.orders.loading
-    : t.orders.loadOrdersButton}
-</Button>
+          <Button onClick={handleLoad} disabled={isLoadingOrders}>
+            {isLoadingOrders ? t.orders.loading : t.orders.loadOrdersButton}
+          </Button>
         </div>
 
         <div className="border border-border rounded-lg bg-card overflow-hidden">
@@ -193,26 +206,26 @@ export default function OrdersPage() {
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-muted-foreground bg-muted/50 uppercase border-b border-border">
                 <tr>
-           <th>{t.orders.order}</th>
-<th>{t.orders.customer}</th>
-<th>{t.orders.items}</th>
-<th>{t.orders.total}</th>
-<th>{t.orders.date}</th>
+                  <th className="px-6 py-3">{t.orders.order}</th>
+                  <th className="px-6 py-3">{t.orders.customer}</th>
+                  <th className="px-6 py-3">{t.orders.items}</th>
+                  <th className="px-6 py-3">{t.orders.total}</th>
+                  <th className="px-6 py-3 text-right">{t.orders.date}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {isLoadingOrders ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
+                    <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
                       <div className="flex items-center justify-center">
                         <RotateCcw className="h-5 w-5 animate-spin mr-2" />
                         {t.orders.loading}
                       </div>
                     </td>
                   </tr>
-                ) : filteredOrders.length === 0 ? (
+                ) : !orders || orders.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center">
+                    <td colSpan={5} className="px-6 py-12 text-center">
                       <ShoppingCart className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
                       <p className="text-muted-foreground font-medium">
                         No orders found
@@ -223,7 +236,7 @@ export default function OrdersPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredOrders.map((order: Order) => (
+                  (orders ?? []).map((order: Order) => (
                     <tr
                       key={order.id}
                       className="hover:bg-muted/30 transition-colors cursor-pointer group"
@@ -270,12 +283,12 @@ export default function OrdersPage() {
         </div>
 
         {ordersPage && ordersPage.totalElements > 0 && (
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
             <div>
               {t.orders.showingPage} {ordersPage.page} of {ordersPage.totalPages} ·{' '}
               {ordersPage.totalElements} {t.orders.totalOrders}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="sm"
@@ -283,15 +296,40 @@ export default function OrdersPage() {
                 disabled={isLoadingOrders || page <= 1}
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
+                {t.orders.previous}
               </Button>
+
+              <div className="flex items-center gap-1 mx-1">
+                {pageWindow.map((entry, index) =>
+                  entry === 'ellipsis' ? (
+                    <span
+                      key={`ellipsis-${index}`}
+                      className="flex h-8 w-8 items-center justify-center text-muted-foreground/60"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </span>
+                  ) : (
+                    <Button
+                      key={entry}
+                      variant={entry === page ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      disabled={isLoadingOrders}
+                      onClick={() => goToPage(entry)}
+                    >
+                      {entry}
+                    </Button>
+                  )
+                )}
+              </div>
+
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => goToPage(page + 1)}
                 disabled={isLoadingOrders || page >= ordersPage.totalPages}
               >
-                Next
+                {t.orders.next}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
@@ -321,7 +359,6 @@ export default function OrdersPage() {
                     </p>
                   )}
                 </div>
-        
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -345,7 +382,8 @@ export default function OrdersPage() {
 
               <div>
                 <p className="text-muted-foreground mb-2 text-sm">
-                  {t.orders.items}{selectedOrder.items ? ` (${selectedOrder.items.length})` : ''}
+                  {t.orders.items}
+                  {selectedOrder.items ? ` (${selectedOrder.items.length})` : ''}
                 </p>
                 <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
                   {selectedOrder.items && selectedOrder.items.length > 0 ? (
