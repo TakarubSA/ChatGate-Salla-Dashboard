@@ -172,12 +172,12 @@ Price: order.items.reduce((total, item) => total + item?.totalPrice!, 0),
           icon={<ShoppingCart className="h-4 w-4" />}
           // description={t.dashboard.cartsInLast30Days}
         />
-        <StatCard
+        {/* <StatCard
           title={t.dashboard.recoveredRevenue}
           value={isLoadingDashboard ? '...' : formatCurrency(stats.totalRevenue)}
           icon={<DollarSign className="h-4 w-4 text-emerald-500" />}
           // description={`${stats.sentCount} sent`}
-        />
+        /> */}
         <StatCard
           title={t.dashboard.totalOrders}
           value={isLoadingDashboard ? '...' : stats.totalOrders}

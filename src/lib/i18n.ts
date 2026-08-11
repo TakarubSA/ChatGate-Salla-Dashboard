@@ -517,7 +517,7 @@ ar: {
     totalAbandoned: 'إجمالي السلات المتروكة',
     cartsInLast30Days: 'السلات خلال آخر 30 يومًا',
     
-    recoveredRevenue: 'الإيرادات المستردة',
+    recoveredRevenue: 'مجموع المبيعات',
     purchased: 'تم الشراء',
     cartsPurchased: 'السلات التي تم شراؤها',
     
@@ -761,7 +761,10 @@ ar: {
   utility: 'خدمي',
   authentication: 'مصادقة',
 
-  orders: {
+
+ },
+
+   orders: {
     title: 'الطلبات',
     subtitle: 'تتبع التحويلات وأداء المبيعات الإجمالي.',
 
@@ -839,7 +842,6 @@ ar: {
     sku: 'رمز المنتج',
     qty: 'الكمية',
   },
- },
 
   abandonedCarts: {
     sendSelected: 'تذكير بالمختارين',
