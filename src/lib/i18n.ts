@@ -151,6 +151,7 @@ export const translations = {
          "pending": "Pending",
     "processing": "Processing",
     "failed": "Failed",
+    
     "active": "Active",
     "notified": "Notified",
     "order_created": "Order Created",
@@ -166,6 +167,8 @@ export const translations = {
   loadTemplatesButton: 'Load Templates',
 
   template: 'Template',
+  createdAt: 'Created At',
+image: 'Image',
   name: 'Name',
   category: 'Category',
   language: 'Language',
@@ -245,7 +248,6 @@ export const translations = {
 
   none: 'None',
   text: 'Text',
-  image: 'Image',
   video: 'Video',
   document: 'Document',
 
@@ -453,57 +455,171 @@ export const translations = {
       delete: 'Delete',
     },
   },
-  ar: {
-    nav: {
-      dashboard: 'لوحة التحكم',
-      orders: 'الطلبات',
-      abandonCarts: 'السلات المتروكة',
-      reports: 'التقارير',
-      team: 'الفريق',
-      reminderRules: 'قواعد التذكير',
-      templates:"القوالب",
-      campaigns:"الحملات"
-    },
-    login: {
-      title: 'مرحباً بعودتك',
-      subtitle: 'سجّل الدخول إلى حساب ChatGate الخاص بك.',
-      email: 'البريد الإلكتروني',
-      password: 'كلمة المرور',
-      submit: 'تسجيل الدخول',
-      submitting: 'جاري تسجيل الدخول...',
-      demoHint: 'بيانات دخول تجريبية',
-      invalidCredentials: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
-      inactiveAccount: 'هذا الحساب غير مُفعّل بعد.',
-    },
-    templates: {
+
+ar: {
+  nav: {
+    dashboard: 'لوحة التحكم',
+    orders: 'الطلبات',
+    abandonCarts: 'السلات المتروكة',
+    reports: 'التقارير',
+    team: 'الفريق',
+    reminderRules: 'قواعد التذكير',
+    templates: 'القوالب',
+    campaigns: 'الحملات',
+  },
+
+  login: {
+    title: 'مرحبًا بعودتك',
+    subtitle: 'سجّل دخولك إلى حسابك في ChatGate.',
+    email: 'البريد الإلكتروني',
+    password: 'كلمة المرور',
+    submit: 'تسجيل الدخول',
+    submitting: 'جارٍ تسجيل الدخول...',
+    demoHint: 'بيانات الدخول التجريبية',
+    invalidCredentials: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+    inactiveAccount: 'حسابك غير مفعّل حتى الآن.',
+  },
+
+  common: {
+    load: 'تحميل',
+    viewAs: 'العرض كـ',
+    admin: 'مسؤول',
+    marketing: 'تسويق',
+    administrator: 'مسؤول النظام',
+    marketingUser: 'مستخدم التسويق',
+    adminRole: 'صلاحية المسؤول',
+    marketingRole: 'صلاحية التسويق',
+    language: 'اللغة',
+    english: 'الإنجليزية',
+    arabic: 'العربية',
+    refresh: 'تحديث',
+    export: 'تصدير',
+    search: 'بحث',
+    allStatuses: 'كل الحالات',
+    active: 'نشط',
+    reminded: 'تم التذكير',
+    purchased: 'تم الشراء',
+    expired: 'منتهي',
+    pending: 'قيد الانتظار',
+    processing: 'قيد المعالجة',
+    completed: 'مكتمل',
+    cancelled: 'ملغي',
+    refunded: 'مسترد',
+    item: 'منتج',
+    items: 'منتجات',
+    logout: 'تسجيل الخروج',
+  },
+
+  dashboard: {
+    title: 'لوحة التحكم',
+    subtitle: 'تابع أداء المبيعات واستعد الإيرادات من السلات المتروكة.',
+    
+    totalAbandoned: 'إجمالي السلات المتروكة',
+    cartsInLast30Days: 'السلات خلال آخر 30 يومًا',
+    
+    recoveredRevenue: 'الإيرادات المستردة',
+    purchased: 'تم الشراء',
+    cartsPurchased: 'السلات التي تم شراؤها',
+    
+    conversionRate: 'معدل التحويل',
+    afterReminders: 'بعد التذكيرات',
+    
+    remindersSent: 'التذكيرات المرسلة',
+    viaChannel: 'عبر واتساب / SMS',
+    
+    searchCustomer: 'البحث عن عميل...',
+    customer: 'العميل',
+    cartValue: 'قيمة السلة',
+    status: 'الحالة',
+    timing: 'التوقيت',
+    action: 'الإجراء',
+    remind: 'إرسال تذكير',
+    
+    loadingCarts: 'جارٍ تحميل السلات...',
+    noCartsFound: 'لا توجد سلات متروكة',
+    tryAdjustingFilters: 'حاول تعديل عوامل التصفية',
+    
+    sent: 'تم الإرسال',
+    last: 'آخر',
+    totalOrders: 'إجمالي الطلبات',
+    
+    noContactInfo: 'لا تتوفر بيانات للتواصل',
+    
+    reminderSentTitle: 'تم إرسال التذكير',
+    reminderSentDescription: 'تم إرسال تذكير السلة المتروكة بنجاح.',
+    
+    reminderFailedTitle: 'تعذر إرسال التذكير',
+    reminderFailedDescription: 'حدث خطأ أثناء إرسال التذكير. يرجى المحاولة مرة أخرى.',
+    
+    exportSuccessTitle: 'التصدير جاهز',
+    exportSuccessDescription: 'تم تصدير السلات المتروكة إلى ملف Excel.',
+    
+    latest_orders: 'أحدث الطلبات',
+    latest_abandon: 'أحدث السلات المتروكة',
+    
+    pending: 'قيد الانتظار',
+    processing: 'قيد المعالجة',
+    failed: 'فشل',
+    active: 'نشط',
+    notified: 'تم إشعاره',
+    order_created: 'تم إنشاء الطلب',
+    expired: 'منتهي',
+    
+    loading: 'جارٍ التحميل...',
+    noRecentOrders: 'لا توجد طلبات حديثة',
+    noRecentAbandonedCarts: 'لا توجد سلات متروكة حديثة',
+    deliveryErrors: 'طلبات بها أخطاء في التسليم',
+  },
+
+ templates: {
   title: 'القوالب',
-  pageSubtitle: 'إدارة قوالب رسائل واتساب.',
+  newTemplateDescription:
+    'أنشئ قالبًا جديدًا لإرساله للموافقة.',
+
+  pageSubtitle:
+    'أنشئ وأدر قوالب رسائل واتساب الخاصة بك.',
+
   exportPage: 'تصدير القوالب',
 
-  searchPlaceholder: 'ابحث في القوالب...',
-  loadTemplatesButton: 'تحميل القوالب',
+  searchPlaceholder:
+    'ابحث في القوالب...',
+
+  loadTemplatesButton:
+    'تحميل القوالب',
 
   template: 'القالب',
   name: 'الاسم',
   category: 'الفئة',
   language: 'اللغة',
+  status: 'الحالة',
+  createdAt: 'تاريخ الإنشاء',
+  image: 'صورة',
+
+  newTemplate:
+    'إضافة قالب جديد',
+
   topic: 'الموضوع',
   useCase: 'حالة الاستخدام',
-  header: 'العنوان',
+  header: 'الرأس',
   body: 'المحتوى',
   buttons: 'الأزرار',
-  newTemplate:"اضافة قالب جديد",
   parameters: 'المتغيرات',
   industries: 'القطاعات',
 
-  loading: 'جارٍ تحميل القوالب...',
-  noTemplatesFound: 'لا توجد قوالب',
-  noTemplatesDescription: 'لا توجد قوالب تطابق البحث.',
+  loading:
+    'جارٍ تحميل القوالب...',
 
-  templateDetails: 'تفاصيل القالب',
+  noTemplatesFound:
+    'لا توجد قوالب',
+
+  noTemplatesDescription:
+    'لا توجد قوالب تطابق البحث.',
+
+  templateDetails:
+    'تفاصيل القالب',
 
   url: 'الرابط',
-  phone: 'الهاتف',
+  phone: 'رقم الجوال',
   type: 'النوع',
 
   previous: 'السابق',
@@ -511,405 +627,475 @@ export const translations = {
 
   showingPage: 'عرض الصفحة',
   of: 'من',
-  totalTemplates: 'إجمالي القوالب',
+  totalTemplates:
+    'إجمالي القوالب',
 
-  exportSuccessTitle: 'تم تجهيز التصدير',
-  exportSuccessDescription: 'تم تصدير القوالب إلى ملف Excel.',
-   search: 'بحث',
-  searchHint: 'الاسم، الفئة، الحالة...',
-  status: 'الحالة',
-  loadingDetails: 'جارٍ التحميل...',
-  exampleParams: 'أمثلة على المتغيرات',
-  headerImage: 'صورة الرأس',
+  exportSuccessTitle:
+    'التصدير جاهز',
+
+  exportSuccessDescription:
+    'تم تصدير القوالب إلى ملف Excel.',
+
+  search: 'بحث',
+
+  searchHint:
+    'الاسم، الفئة، الحالة...',
+
+  loadingDetails:
+    'جارٍ التحميل...',
+
+  exampleParams:
+    'أمثلة على المتغيرات',
+
+  headerImage:
+    'صورة الرأس',
+
   code: 'الرمز',
-  failedToLoadDetails: 'فشل تحميل تفاصيل القالب',
-  tryAdjustingSearch: 'حاول تعديل البحث',
-  showingTemplates: 'عرض {{from}}–{{to}} من أصل {{total}} قالب',
-  templatesCount: '{{count}} قالب',
-    actions: 'الإجراءات',
 
-  createSuccessTitle: 'تم إرسال القالب',
-  createSuccessDescription: 'تم إرسال القالب للمراجعة والموافقة.',
+  failedToLoadDetails:
+    'تعذر تحميل تفاصيل القالب',
 
-  createErrorTitle: 'فشل إنشاء القالب',
-  createErrorDescription: 'حدث خطأ ما.',
+  tryAdjustingSearch:
+    'حاول تعديل البحث',
 
-  deleteSuccessTitle: 'تم حذف القالب',
-  deleteSuccessDescription: 'تم حذف القالب بنجاح.',
+  showingTemplates:
+    'عرض {{from}}–{{to}} من أصل {{total}} قالب',
 
-  deleteErrorTitle: 'فشل حذف القالب',
-  deleteErrorDescription: 'حدث خطأ ما.',
+  templatesCount:
+    '{{count}} قالب',
 
-  deleteConfirmTitle: 'حذف القالب',
+  actions:
+    'الإجراءات',
+
+  createSuccessTitle:
+    'تم إرسال القالب',
+
+  createSuccessDescription:
+    'تم إرسال القالب للمراجعة والموافقة.',
+
+  createErrorTitle:
+    'تعذر إنشاء القالب',
+
+  createErrorDescription:
+    'حدث خطأ ما. يرجى المحاولة مرة أخرى.',
+
+  deleteSuccessTitle:
+    'تم حذف القالب',
+
+  deleteSuccessDescription:
+    'تم حذف القالب بنجاح.',
+
+  deleteErrorTitle:
+    'تعذر حذف القالب',
+
+  deleteErrorDescription:
+    'حدث خطأ أثناء حذف القالب. يرجى المحاولة مرة أخرى.',
+
+  deleteConfirmTitle:
+    'حذف القالب',
+
   deleteConfirmDescription:
     'سيتم حذف "{{name}}" نهائيًا، ولا يمكن التراجع عن هذا الإجراء.',
 
   delete: 'حذف',
   duplicate: 'نسخ',
 
-  newTemplateDescription: 'أنشئ قالب واتساب لإرساله للموافقة.',
-  submitTemplate: 'إرسال القالب',
-  duplicateTemplate: 'نسخ القالب',
+  submitTemplate:
+    'إرسال القالب',
+
+  duplicateTemplate:
+    'نسخ القالب',
 
   cancel: 'إلغاء',
-  builderTitle: 'منشئ القوالب',
-  builderDescription: 'أنشئ قالب واتساب لإرساله للموافقة.',
-  saveTemplate: 'حفظ القالب',
 
-  approvalMetadata: 'بيانات الموافقة',
+  builderTitle:
+    'منشئ القوالب',
 
-  format: 'التنسيق',
+  builderDescription:
+    'أنشئ قالب واتساب وأرسله للموافقة.',
 
-  optionalOpeningContent: 'محتوى افتتاحي اختياري',
+  saveTemplate:
+    'حفظ القالب',
+
+  approvalMetadata:
+    'بيانات الموافقة',
+
+  format:
+    'التنسيق',
+
+  optionalOpeningContent:
+    'محتوى افتتاحي اختياري',
 
   none: 'بدون',
   text: 'نص',
-  image: 'صورة',
   video: 'فيديو',
   document: 'مستند',
 
-  headerText: 'نص الرأس',
-  headerTextPlaceholder: 'طلبك جاهز',
+  headerText:
+    'نص الرأس',
 
-  sampleMediaUrl: 'رابط وسائط تجريبي',
-  sampleMediaUrlPlaceholder: 'https://example.com/header.jpg',
+  headerTextPlaceholder:
+    'طلبك جاهز',
 
+  sampleMediaUrl:
+    'رابط الوسائط التجريبي',
+
+  sampleMediaUrlPlaceholder:
+    'https://example.com/header.jpg',
 
   footer: 'التذييل',
-  footerPlaceholder: 'أرسل STOP لإلغاء الاشتراك',
 
-  variableExamples: 'أمثلة المتغيرات',
-  variableExamplesDescription: 'قيم تجريبية لمعاينة الموافقة',
-  variableExamplePlaceholder: 'مثال {{number}}',
+  footerPlaceholder:
+    'أرسل STOP لإلغاء الاشتراك',
 
+  variableExamples:
+    'أمثلة على المتغيرات',
+
+  variableExamplesDescription:
+    'قيم تجريبية لمعاينة القالب قبل الموافقة',
+
+  variableExamplePlaceholder:
+    'مثال {{number}}',
 
   marketing: 'تسويقي',
   utility: 'خدمي',
-  authentication: 'المصادقة',
-},
-    common: {
-      load: 'تحميل',
-      viewAs: 'عرض كـ',
-      admin: 'مسؤول',
-      marketing: 'تسويق',
-      administrator: 'مسؤول النظام',
-      marketingUser: 'مستخدم التسويق',
-      adminRole: 'دور المسؤول',
-      marketingRole: 'دور التسويق',
-      language: 'اللغة',
-      english: 'الإنجليزية',
-      arabic: 'العربية',
-      refresh: 'تحديث',
-      export: 'تصدير',
-      search: 'بحث',
-      allStatuses: 'جميع الحالات',
-      active: 'نشطة',
-      reminded: 'تم التذكير',
-      purchased: 'مكتملة',
-      expired: 'منتهية',
-      pending: 'قيد الانتظار',
-      processing: 'قيد المعالجة',
-      completed: 'مكتمل',
-      cancelled: 'ملغي',
-      refunded: 'مسترد',
-      item: 'منتج',
-      items: 'منتجات',
-      logout: 'تسجيل الخروج',
-    },
-    dashboard: {
-      title: 'لوحة التحكم',
-      subtitle: 'راقب الإيرادات المفقودة واستعدها.',
-      totalAbandoned: 'إجمالي السلات المتروكة',
-      cartsInLast30Days: 'سلات خلال آخر 30 يومًا',
-      recoveredRevenue: 'الإيرادات المستردة',
-      purchased:"تم الشراء",
-      cartsPurchased: 'سلات تم شراؤها',
-      conversionRate: 'معدل التحويل',
-      afterReminders: 'بعد التذكيرات',
-      remindersSent: 'التذكيرات المرسلة',
-      viaChannel: 'عبر واتساب/رسائل نصية',
-      searchCustomer: 'ابحث عن عميل...',
-      customer: 'العميل',
-      cartValue: 'قيمة السلة',
-      status: 'الحالة',
-      timing: 'التوقيت',
-      action: 'الإجراء',
-      remind: 'تذكير',
-      loadingCarts: 'جارٍ تحميل السلات...',
-      noCartsFound: 'لا توجد سلات متروكة',
-      tryAdjustingFilters: 'حاول تعديل عوامل التصفية',
-      sent: 'تم الإرسال',
-      totalOrders:"أخر الطلبات",
-      last: 'آخر',
-      noContactInfo: 'لا تتوفر بيانات تواصل',
-      reminderSentTitle: 'تم إرسال التذكير',
-      reminderSentDescription: 'تم إرسال تذكير السلة المتروكة بنجاح.',
-      reminderFailedTitle: 'فشل إرسال التذكير',
-      reminderFailedDescription: 'حدث خطأ أثناء إرسال التذكير. حاول مرة أخرى.',
-      exportSuccessTitle: 'التصدير جاهز',
-      exportSuccessDescription: 'تم تصدير السلات المتروكة إلى ملف إكسل.',
-      latest_orders:"أحدث الطلبات",
-      latest_abandon:"أحدث السلات المتروكة",
-          "pending": "قيد الانتظار",
-    "processing": "قيد المعالجة",
-    "failed": "فشل",
-    "active": "نشط",
-    "notified": "تم الإشعار",
-    "order_created": "تم إنشاء الطلب",
-    "expired": "منتهي",
+  authentication: 'مصادقة',
 
-  loading: 'جارٍ التحميل...',
-  noRecentOrders: 'لا توجد طلبات حديثة',
-  noRecentAbandonedCarts: 'لا توجد سلات متروكة حديثة',
-  deliveryErrors: 'طلبات بها أخطاء في التسليم',
-    },
-    orders: {
-      title: 'الطلبات',
-      subtitle: 'تتبع التحويلات وأداء المبيعات الإجمالي.',
-      totalRevenue: 'إجمالي الإيرادات',
-      acrossAllOrders: 'لجميع الطلبات',
-      totalOrders: 'إجمالي الطلبات',
-      completedCount: 'مكتملة',
-      recoveredViaChatgate: 'مستردة عبر ChatGate',
-      ordersFromReminders: 'طلبات من تذكيرات السلات',
-      pendingFulfillment: 'قيد التنفيذ',
-      awaitingProcessing: 'في انتظار المعالجة',
-      searchOrders: 'ابحث في الطلبات...',
-      order: 'الطلب',
-      customer: 'العميل',
-      amount: 'المبلغ',
-      status: 'الحالة',
-      source: 'المصدر',
-      date: 'التاريخ',
-      direct: 'مباشر',
-      recovered: 'مستردة',
-      loadingOrders: 'جارٍ تحميل الطلبات...',
-      noOrdersFound: 'لا توجد طلبات',
-      tryAdjustingFilters: 'حاول تعديل عوامل التصفية',
-      orderDetails: 'الطلب',
-      totalAmount: 'المبلغ الإجمالي',
-      viewInSalla: 'عرض في سلة',
-      failedToLoad: 'فشل تحميل تفاصيل الطلب.',
-      exportSuccessTitle: 'التصدير جاهز',
-      exportSuccessDescription: 'تم تصدير الطلبات إلى ملف إكسل.',
-        pageSubtitle: 'الطلبات المتزامنة من متاجر سلة المتصلة.',
-  exportPage: 'تصدير الصفحة',
-  exportPageHint: 'تصدير الصفحة الحالية فقط',
+  orders: {
+    title: 'الطلبات',
+    subtitle: 'تتبع التحويلات وأداء المبيعات الإجمالي.',
 
-  startDate: 'تاريخ البداية',
-  endDate: 'تاريخ النهاية',
-  loadOrdersButton: 'تحميل الطلبات',
+    totalRevenue: 'إجمالي الإيرادات',
+    acrossAllOrders: 'من جميع الطلبات',
 
-  orderIdPlaceholder: 'العميل، الجوال، رقم الطلب...',
+    totalOrders: 'إجمالي الطلبات',
+    completedCount: 'مكتملة',
 
-  items: 'المنتجات',
-  total: 'الإجمالي',
-  store: 'المتجر',
+    recoveredViaChatgate: 'مستردة عبر ChatGate',
+    ordersFromReminders: 'الطلبات الناتجة عن تذكيرات السلات',
 
-  loading: 'جارٍ التحميل...',
-  loadingOrdersTable: 'جارٍ تحميل الطلبات...',
-  noOrdersDescription: 'حاول تعديل عوامل التصفية أو نطاق التاريخ',
+    pendingFulfillment: 'طلبات قيد التنفيذ',
+    awaitingProcessing: 'في انتظار المعالجة',
 
-  showingPage: 'عرض الصفحة',
-  of: 'من',
-  totalOrdersLabel: 'إجمالي الطلبات',
+    searchOrders: 'البحث في الطلبات...',
 
-  previous: 'السابق',
-  next: 'التالي',
+    order: 'الطلب',
+    customer: 'العميل',
+    amount: 'المبلغ',
+    status: 'الحالة',
+    source: 'المصدر',
+    date: 'التاريخ',
 
-  orderTotal: 'إجمالي الطلب',
-  reference: 'المرجع',
-  createdOn: 'تاريخ الإنشاء',
+    direct: 'مباشر',
+    recovered: 'مسترد',
 
-  noLineItems: 'لا توجد منتجات في هذا الطلب',
+    loadingOrders: 'جارٍ تحميل الطلبات...',
+    noOrdersFound: 'لا توجد طلبات',
+    tryAdjustingFilters: 'حاول تعديل عوامل التصفية',
 
-  sku: 'رمز المنتج',
-  qty: 'الكمية',
-    },
-    abandonedCarts: {
-      sendSelected:"تذكير المختارين",
-      sendReminder:"ارسال تذكير",
-      loadCarts:"تحميل السلات",
-      title: 'السلات المتروكة',
-      subtitle: 'تتبّع السلات التي تركها العملاء واستردها.',
-      totalValue: 'إجمالي القيمة',
-      acrossAllCarts: 'لجميع السلات',
-      totalCarts: 'إجمالي السلات',
-      activeCount: 'نشطة',
-      recoveredViaChatgate: 'مستردة عبر ChatGate',
-      cartsFromReminders: 'سلات مستردة عبر التذكيرات',
-      expiredCarts: 'سلات منتهية',
-      noLongerRecoverable: 'لم تعد قابلة للاسترداد',
-      searchCarts: 'ابحث في السلات...',
-      cart: 'السلة',
-      customer: 'العميل',
-      amount: 'المبلغ',
-      status: 'الحالة',
-      sendCount: 'التذكيرات المرسلة',
-      date: 'التاريخ',
-      loadingCarts: 'جارٍ تحميل السلات...',
-      noCartsFound: 'لا توجد سلات متروكة',
-      tryAdjustingFilters: 'حاول تعديل عوامل التصفية',
-      cartDetails: 'السلة',
-      cartValue: 'قيمة السلة',
-      abandonedOn: 'تاريخ الترك',
-      nextReminder: 'التذكير القادم',
-      viewCheckout: 'عرض صفحة الدفع',
-      failedToLoad: 'فشل تحميل تفاصيل السلة.',
-      statusActive: 'نشطة',
-      statusNotified: 'تم التذكير',
-      statusRecovered: 'مستردة',
-      statusExpired: 'منتهية',
-      exportSuccessTitle: 'التصدير جاهز',
-      exportSuccessDescription: 'تم تصدير السلات المتروكة إلى ملف إكسل.',
+    orderDetails: 'تفاصيل الطلب',
+    totalAmount: 'المبلغ الإجمالي',
+    viewInSalla: 'عرض في سلة',
 
-      // Selection toolbar & pagination
-      clear: 'مسح',
-      remind: 'تذكير',
-      cartsSelectedSuffix: 'محددة',
-      page: 'صفحة',
-      previous: 'السابق',
-      next: 'التالي',
+    failedToLoad: 'تعذر تحميل تفاصيل الطلب.',
 
-      // Send reminder + coupon dialog
-      sendWhatsappReminderTitle: 'إرسال تذكير واتساب',
-      sendReminderDescriptionMulti: 'سيتم إرسال رسالة إلى {{count}} عميل بخصوص سلاتهم المتروكة.',
-      sendReminderDescriptionSingle: 'سيتم إرسال رسالة إلى العميل بخصوص سلته المتروكة.',
-      discountCouponLabel: 'كوبون الخصم (اختياري)',
-      couponPlaceholder: 'مثال: COMEBACK10',
-      couponHelperText: 'اتركه فارغًا لإرسال التذكير بدون كود خصم.',
-      cancel: 'إلغاء',
-      sending: 'جارٍ الإرسال...',
-      send: 'إرسال',
+    exportSuccessTitle: 'التصدير جاهز',
+    exportSuccessDescription: 'تم تصدير الطلبات إلى ملف Excel.',
 
-      // Send result toasts
-      noCartsSelectedTitle: 'لم يتم اختيار أي سلة',
-      remindersSentTitle: 'تم إرسال التذكيرات',
-      remindersSentDescription: 'تم إرسال {{count}} تذكير بنجاح.',
-      failedToSendTitle: 'فشل الإرسال',
-      failedToSendDescription: 'تعذر إرسال التذكير. حاول مرة أخرى.',
-    },
-    reports: {
-      title: 'التقارير',
-      subtitle: 'رؤى عامة حول أداء استرداد السلات.',
-      last30Days: 'آخر 30 يومًا',
-      totalRevenue: 'إجمالي الإيرادات',
-      averageOrderValue: 'متوسط قيمة الطلب',
-      recoveryRate: 'معدل الاسترداد',
-      revenueTrend: 'اتجاه الإيرادات',
-      cartRecovery: 'استرداد السلات',
-    },
-    team: {
-      title: 'إدارة الفريق',
-      subtitle: 'إدارة صلاحيات الوصول لفريق التسويق والعمليات.',
-      addMember: 'إضافة عضو',
-      member: 'العضو',
-      role: 'الدور',
-      status: 'الحالة',
-      actions: 'الإجراءات',
-      invited: 'مدعو',
-    },
-    reminderRules: {
-      title: 'تذكيرات السلات المتروكة',
-      subtitle: 'تذكير العملاء تلقائيًا لإكمال الشراء بناءً على مدة ترك السلة.',
-      createNew: 'إنشاء تذكير جديد',
-      editReminder: 'تعديل التذكير',
-      createReminder: 'إنشاء تذكير جديد',
-      ruleId: 'رقم القاعدة',
-      reminderAfter: 'تذكير بعد',
-      hours: 'ساعة/ساعات',
-      cartTotalLabel: 'إجمالي السلة',
-      couponLabel: 'الكوبون',
-      couponValueLabel: 'قيمة الكوبون',
-      noCartTotal: 'أي إجمالي سلة',
-      noCoupon: 'بدون كوبون',
-      active: 'نشط',
-      inactive: 'غير نشط',
-      abandonedTimeField: 'وقت الترك',
-      abandonedTimePlaceholder: 'مثال: 2',
-      cartTotalField: 'إجمالي السلة (اختياري)',
-      cartTotalPlaceholder: 'الحد الأدنى لإجمالي السلة',
-      couponField: 'الكوبون',
-      couponPlaceholder: 'مثال: SAVE10',
-      couponValueField: 'قيمة الكوبون',
-      couponValuePlaceholder: 'مثال: 15.00',
-      publish: 'نشر التذكير',
-      saveChanges: 'حفظ التغييرات',
-      cancel: 'إلغاء',
-      noRules: 'لا توجد قواعد تذكير بعد',
-      noRulesDescription: 'أنشئ أول قاعدة لبدء إرسال التذكيرات التلقائية.',
-      deleteConfirm: 'هل أنت متأكد أنك تريد حذف قاعدة التذكير هذه؟',
-      createSuccess: 'تم إنشاء قاعدة التذكير',
-      updateSuccess: 'تم تحديث قاعدة التذكير',
-      deleteSuccess: 'تم حذف قاعدة التذكير',
-      errorGeneric: 'حدث خطأ ما. حاول مرة أخرى.',
-      edit: 'تعديل',
-      delete: 'حذف',
-    },
+    pageSubtitle: 'الطلبات المتزامنة من متاجر سلة المتصلة.',
 
-    campaigns: {
-      title:"الحملات",
-  pageSubtitle: 'أرسل رسائل القوالب إلى الجماهير وتابع نتائج الإرسال.',
+    exportPage: 'تصدير الصفحة',
+    exportPageHint: 'يتم تصدير الصفحة الحالية فقط',
 
-  exportPage: 'تصدير',
-  exportSuccessTitle: 'تم تجهيز التصدير',
-  exportSuccessDescription: 'تم تصدير الحملات إلى ملف Excel.',
+    startDate: 'تاريخ البداية',
+    endDate: 'تاريخ النهاية',
+    loadOrdersButton: 'تحميل الطلبات',
 
-  newCampaign: 'حملة جديدة',
-  newCampaignDescription: 'أرسل رسالة قالب إلى جمهور محدد.',
-  submitCampaign: 'إنشاء الحملة',
-  duplicateCampaign: 'نسخ الحملة',
+    orderIdPlaceholder: 'العميل، الجوال، رقم الطلب...',
 
-  search: 'بحث',
-  searchHint: 'الاسم، القالب، الحالة...',
+    items: 'المنتجات',
+    total: 'الإجمالي',
+    store: 'المتجر',
 
-  name: 'الاسم',
-  template: 'القالب',
-  audience: 'الجمهور',
-  status: 'الحالة',
-  scheduled: 'موعد الإرسال',
-  recipients: 'المستلمون',
-  sent: 'تم الإرسال',
-  delivered: 'تم التسليم',
-  read: 'تمت القراءة',
-  failed: 'فشل',
-  actions: 'الإجراءات',
+    loading: 'جارٍ التحميل...',
+    loadingOrdersTable: 'جارٍ تحميل الطلبات...',
 
-  loading: 'جارٍ تحميل الحملات...',
-  noCampaignsFound: 'لا توجد حملات',
-  tryAdjustingSearch: 'حاول تعديل البحث',
+    noOrdersDescription:
+      'حاول تعديل عوامل التصفية أو نطاق التاريخ.',
 
-  showingCampaigns: 'عرض {{from}}–{{to}} من أصل {{total}} حملة',
-  campaignsCount: '{{count}} حملة',
+    showingPage: 'عرض الصفحة',
+    of: 'من',
+    totalOrdersLabel: 'إجمالي الطلبات',
 
-  previous: 'السابق',
-  next: 'التالي',
+    previous: 'السابق',
+    next: 'التالي',
 
-  duplicate: 'نسخ',
-  delete: 'حذف',
-  cancel: 'إلغاء',
+    orderTotal: 'إجمالي الطلب',
+    reference: 'المرجع',
+    createdOn: 'تاريخ الإنشاء',
 
-  createSuccessTitle: 'تم إنشاء الحملة',
-  createSuccessNowDescription: 'جارٍ إرسال الحملة.',
-  createSuccessScheduledDescription: 'تم جدولة الحملة بنجاح.',
+    noLineItems: 'لا توجد منتجات مضافة إلى هذا الطلب',
 
-  createErrorTitle: 'فشل إنشاء الحملة',
-  createErrorDescription: 'حدث خطأ ما.',
-
-  deleteSuccessTitle: 'تم حذف الحملة',
-  deleteSuccessDescription: 'تم حذف الحملة بنجاح.',
-
-  deleteErrorTitle: 'فشل حذف الحملة',
-  deleteErrorDescription: 'حدث خطأ ما.',
-
-  deleteConfirmTitle: 'حذف الحملة',
-  deleteConfirmDescription:
-    'سيتم حذف "{{name}}" نهائيًا، ولا يمكن التراجع عن هذا الإجراء.',
-
-  failedToLoadDetails: 'فشل تحميل تفاصيل الحملة',
-    }
+    sku: 'رمز المنتج',
+    qty: 'الكمية',
   },
-} as const;
+ },
+
+  abandonedCarts: {
+    sendSelected: 'تذكير بالمختارين',
+    sendReminder: 'إرسال تذكير',
+    loadCarts: 'تحميل السلات',
+
+    title: 'السلات المتروكة',
+    subtitle: 'تتبع السلات المتروكة وساعد العملاء على إكمال عمليات الشراء.',
+
+    totalValue: 'إجمالي القيمة',
+    acrossAllCarts: 'من جميع السلات',
+
+    totalCarts: 'إجمالي السلات',
+    activeCount: 'نشطة',
+
+    recoveredViaChatgate: 'مستردة عبر ChatGate',
+    cartsFromReminders: 'السلات المستردة من خلال التذكيرات',
+
+    expiredCarts: 'السلات المنتهية',
+    noLongerRecoverable: 'لم تعد قابلة للاسترداد',
+
+    searchCarts: 'البحث في السلات...',
+
+    cart: 'السلة',
+    customer: 'العميل',
+    amount: 'المبلغ',
+    status: 'الحالة',
+    sendCount: 'التذكيرات المرسلة',
+    date: 'التاريخ',
+
+    loadingCarts: 'جارٍ تحميل السلات...',
+    noCartsFound: 'لا توجد سلات متروكة',
+    tryAdjustingFilters: 'حاول تعديل عوامل التصفية',
+
+    cartDetails: 'تفاصيل السلة',
+    cartValue: 'قيمة السلة',
+    abandonedOn: 'تاريخ ترك السلة',
+    nextReminder: 'التذكير القادم',
+    viewCheckout: 'عرض صفحة الدفع',
+
+    failedToLoad: 'تعذر تحميل تفاصيل السلة.',
+
+    statusActive: 'نشطة',
+    statusNotified: 'تم التذكير',
+    statusRecovered: 'مستردة',
+    statusExpired: 'منتهية',
+
+    exportSuccessTitle: 'التصدير جاهز',
+    exportSuccessDescription:
+      'تم تصدير السلات المتروكة إلى ملف Excel.',
+
+    clear: 'مسح',
+    remind: 'تذكير',
+    cartsSelectedSuffix: 'محددة',
+
+    page: 'صفحة',
+    previous: 'السابق',
+    next: 'التالي',
+
+    sendWhatsappReminderTitle: 'إرسال تذكير عبر واتساب',
+
+    sendReminderDescriptionMulti:
+      'سيتم إرسال رسالة إلى {{count}} عميل لتذكيرهم بسلاتهم المتروكة.',
+
+    sendReminderDescriptionSingle:
+      'سيتم إرسال رسالة إلى العميل لتذكيره بالسلة المتروكة.',
+
+    discountCouponLabel: 'كوبون خصم (اختياري)',
+    couponPlaceholder: 'مثال: COMEBACK10',
+
+    couponHelperText:
+      'اترك الحقل فارغًا لإرسال التذكير دون كود خصم.',
+
+    cancel: 'إلغاء',
+    sending: 'جارٍ الإرسال...',
+    send: 'إرسال',
+
+    noCartsSelectedTitle: 'لم يتم تحديد أي سلة',
+    remindersSentTitle: 'تم إرسال التذكيرات',
+
+    remindersSentDescription:
+      'تم إرسال {{count}} تذكير بنجاح.',
+
+    failedToSendTitle: 'تعذر الإرسال',
+
+    failedToSendDescription:
+      'تعذر إرسال التذكير. يرجى المحاولة مرة أخرى.',
+  },
+
+  reports: {
+    title: 'التقارير',
+    subtitle: 'نظرة سريعة على أداء استرداد السلات.',
+
+    last30Days: 'آخر 30 يومًا',
+    totalRevenue: 'إجمالي الإيرادات',
+    averageOrderValue: 'متوسط قيمة الطلب',
+    recoveryRate: 'معدل الاسترداد',
+    revenueTrend: 'اتجاه الإيرادات',
+    cartRecovery: 'استرداد السلات',
+  },
+
+  team: {
+    title: 'إدارة الفريق',
+    subtitle: 'أدر صلاحيات الوصول لفريق التسويق والعمليات.',
+    addMember: 'إضافة عضو',
+    member: 'العضو',
+    role: 'الصلاحية',
+    status: 'الحالة',
+    actions: 'الإجراءات',
+    invited: 'تمت دعوته',
+  },
+
+  reminderRules: {
+    title: 'تذكيرات السلات المتروكة',
+
+    subtitle:
+      'يذكّر ChatGate العملاء تلقائيًا بإكمال عمليات الشراء بناءً على مدة ترك السلة.',
+
+    createNew: 'إنشاء تذكير جديد',
+    editReminder: 'تعديل التذكير',
+    createReminder: 'إنشاء تذكير جديد',
+
+    ruleId: 'رقم القاعدة',
+
+    reminderAfter: 'التذكير بعد',
+    hours: 'ساعة/ساعات',
+
+    cartTotalLabel: 'إجمالي السلة',
+    couponLabel: 'الكوبون',
+    couponValueLabel: 'قيمة الكوبون',
+
+    noCartTotal: 'أي قيمة للسلة',
+    noCoupon: 'بدون كوبون',
+
+    active: 'نشط',
+    inactive: 'غير نشط',
+
+    abandonedTimeField: 'مدة ترك السلة',
+    abandonedTimePlaceholder: 'مثال: 2',
+
+    cartTotalField: 'إجمالي السلة (اختياري)',
+    cartTotalPlaceholder: 'الحد الأدنى لقيمة السلة لتفعيل التذكير',
+
+    couponField: 'الكوبون',
+    couponPlaceholder: 'مثال: SAVE10',
+
+    couponValueField: 'قيمة الكوبون',
+    couponValuePlaceholder: 'مثال: 15.00',
+
+    publish: 'نشر التذكير',
+    saveChanges: 'حفظ التغييرات',
+    cancel: 'إلغاء',
+
+    noRules: 'لا توجد قواعد تذكير حتى الآن',
+
+    noRulesDescription:
+      'أنشئ أول قاعدة لبدء إرسال التذكيرات تلقائيًا.',
+
+    deleteConfirm:
+      'هل أنت متأكد من رغبتك في حذف قاعدة التذكير هذه؟',
+
+    createSuccess: 'تم إنشاء قاعدة التذكير',
+    updateSuccess: 'تم تحديث قاعدة التذكير',
+    deleteSuccess: 'تم حذف قاعدة التذكير',
+
+    errorGeneric:
+      'حدث خطأ ما. يرجى المحاولة مرة أخرى.',
+
+    edit: 'تعديل',
+    delete: 'حذف',
+  },
+
+  campaigns: {
+    title: 'الحملات',
+
+    pageSubtitle:
+      'أرسل رسائل القوالب لجمهورك وتابع نتائج الإرسال.',
+
+    exportPage: 'تصدير',
+
+    exportSuccessTitle: 'التصدير جاهز',
+    exportSuccessDescription:
+      'تم تصدير الحملات إلى ملف Excel.',
+
+    newCampaign: 'حملة جديدة',
+
+    newCampaignDescription:
+      'أرسل رسالة باستخدام قالب إلى جمهور محدد.',
+
+    submitCampaign: 'إنشاء الحملة',
+    duplicateCampaign: 'نسخ الحملة',
+
+    search: 'بحث',
+    searchHint: 'الاسم، القالب، الحالة...',
+
+    name: 'الاسم',
+    template: 'القالب',
+    audience: 'الجمهور',
+    status: 'الحالة',
+    scheduled: 'موعد الإرسال',
+    recipients: 'المستلمون',
+
+    sent: 'تم الإرسال',
+    delivered: 'تم التسليم',
+    read: 'تمت القراءة',
+    failed: 'فشل',
+
+    actions: 'الإجراءات',
+
+    loading: 'جارٍ تحميل الحملات...',
+    noCampaignsFound: 'لا توجد حملات',
+    tryAdjustingSearch: 'حاول تعديل البحث',
+
+    showingCampaigns:
+      'عرض {{from}}–{{to}} من أصل {{total}} حملة',
+
+    campaignsCount: '{{count}} حملة',
+
+    previous: 'السابق',
+    next: 'التالي',
+
+    duplicate: 'نسخ',
+    delete: 'حذف',
+    cancel: 'إلغاء',
+
+    createSuccessTitle: 'تم إنشاء الحملة',
+
+    createSuccessNowDescription:
+      'جارٍ إرسال الحملة الآن.',
+
+    createSuccessScheduledDescription:
+      'تمت جدولة الحملة بنجاح.',
+
+    createErrorTitle: 'تعذر إنشاء الحملة',
+    createErrorDescription:
+      'حدث خطأ ما. يرجى المحاولة مرة أخرى.',
+
+    deleteSuccessTitle: 'تم حذف الحملة',
+    deleteSuccessDescription:
+      'تم حذف الحملة بنجاح.',
+
+    deleteErrorTitle: 'تعذر حذف الحملة',
+    deleteErrorDescription:
+      'حدث خطأ أثناء حذف الحملة. يرجى المحاولة مرة أخرى.',
+
+    deleteConfirmTitle: 'حذف الحملة',
+
+    deleteConfirmDescription:
+      'سيتم حذف "{{name}}" نهائيًا، ولا يمكن التراجع عن هذا الإجراء.',
+
+    failedToLoadDetails:
+      'تعذر تحميل تفاصيل الحملة',
+  },
+} as const
+}
+
 
 export type TranslationDict = {
   [K in keyof typeof translations.en]: {

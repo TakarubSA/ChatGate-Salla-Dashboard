@@ -112,27 +112,6 @@ const handleSubmit = async (e: React.FormEvent) => {
             </form>
           </CardContent>
         </Card>
-
-        <div className="text-center space-y-2">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            {t.login.demoHint}
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {demoAccounts.map((u) => (
-              <button
-                key={u.id}
-                type="button"
-                onClick={() => fillDemo(u.email)}
-                className="text-xs px-2.5 py-1 rounded-full border border-border bg-card hover:bg-muted transition-colors text-muted-foreground"
-              >
-                {u.email} · {u.role}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground/70">
-            {t.login.password}: <span className="font-mono">{DEMO_PASSWORD}</span>
-          </p>
-        </div>
       </div>
     </div>
   );

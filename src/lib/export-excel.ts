@@ -1,12 +1,33 @@
-import * as XLSX from 'xlsx';
+import * as XLSX from "xlsx";
 
 export function exportToExcel(
-  rows: Record<string, string | any>[],
+  rows: Record<string, any>[],
   filename: string,
-  sheetName = 'Sheet1',
+  sheetName = "Sheet1",
 ) {
-  const worksheet = XLSX.utils.json_to_sheet(rows);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-  XLSX.writeFile(workbook, filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`);
+  if (!rows.length) {
+    return;
+  }
+
+  const worksheet =
+    XLSX.utils.json_to_sheet(rows);
+
+  const workbook =
+    XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    worksheet,
+    sheetName,
+  );
+
+  const finalFilename =
+    filename.endsWith(".xlsx")
+      ? filename
+      : `${filename}.xlsx`;
+
+  XLSX.writeFile(
+    workbook,
+    finalFilename,
+  );
 }
