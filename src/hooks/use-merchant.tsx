@@ -20,7 +20,8 @@ export interface AbandonedCart {
     | "active"
     | "notified"
     | "order_created"
-    | "expired"
+    | "expired" | "reminder_sent"
+    
     |"purchased";
   sendCount: number;
   total: number;

@@ -574,6 +574,13 @@ const getStatusBadge = (
   status: AbandonedCart['status']
 ) => {
   switch (status) {
+
+    case "reminder_sent":
+           return (
+        <Badge variant="secondary">
+          {t.abandonedCarts.reminder_sent}
+        </Badge>
+      );
     case 'active':
       return (
         <Badge variant="secondary">
