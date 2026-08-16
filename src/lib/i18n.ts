@@ -85,6 +85,7 @@ export const translations = {
       inactiveAccount: 'This account is not active yet.',
     },
     common: {
+      reset:"Reset",
         load: 'Load',
       viewAs: 'View As',
       admin: 'Admin',
@@ -483,6 +484,7 @@ ar: {
   },
 
   common: {
+    reset:"اعادة تعيين",
     load: 'تحميل',
     viewAs: 'العرض كـ',
     admin: 'مسؤول',

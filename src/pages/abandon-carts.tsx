@@ -1044,14 +1044,12 @@ const getStatusBadge = (
                       </div>
                     </td>
 
-                    <td className="px-6 py-3 text-right text-muted-foreground text-xs whitespace-nowrap">
-                      {format(
-                        new Date(
-                          cart.createdAt
-                        ),
-                        'MMM d, yyyy'
-                      )}
-                    </td>
+<td className="px-6 py-3 text-right text-muted-foreground text-xs whitespace-nowrap">
+  {format(
+    new Date(cart.createdAt),
+    'MMM d, yyyy h:mm a'
+  )}
+</td>
 
                     <td className="px-6 py-3 text-right">
                       <Button
