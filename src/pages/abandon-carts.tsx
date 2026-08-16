@@ -516,7 +516,6 @@ export default function AbandonCartsPage() {
 
         return;
       }
-
       exportToExcel(
         allCarts.map((cart) => ({
           CartId: cart.cartId,
@@ -529,6 +528,7 @@ export default function AbandonCartsPage() {
           SendCount: cart.sendCount,
           CreatedAt: cart.createdAt,
         })),
+
 
         `chatgate-abandoned-carts-${format(
           new Date(),
@@ -570,46 +570,53 @@ export default function AbandonCartsPage() {
    * ---------------------------------------------------------
    */
 
-  const getStatusBadge = (
-    status: AbandonedCart['status']
-  ) => {
-    switch (status) {
-      case 'active':
-        return (
-          <Badge variant="secondary">
-            {t.abandonedCarts.statusActive}
-          </Badge>
-        );
+const getStatusBadge = (
+  status: AbandonedCart['status']
+) => {
+  switch (status) {
+    case 'active':
+      return (
+        <Badge variant="secondary">
+          {t.abandonedCarts.statusActive}
+        </Badge>
+      );
 
-      case 'notified':
-        return (
-          <Badge className="bg-blue-500/15 text-blue-600 hover:bg-blue-500/15 border-transparent">
-            {t.abandonedCarts.statusNotified}
-          </Badge>
-        );
+    case 'notified':
+      return (
+        <Badge className="bg-blue-500/15 text-blue-600 hover:bg-blue-500/15 border-transparent">
+          {t.abandonedCarts.statusNotified}
+        </Badge>
+      );
 
-      case 'order_created':
-        return (
-          <Badge className="bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15 border-transparent">
-            {t.abandonedCarts.statusRecovered}
-          </Badge>
-        );
+    case 'purchased':
+      return (
+        <Badge className="bg-green-500/15 text-green-600 hover:bg-green-500/15 border-transparent">
+          {t.abandonedCarts.statusPurchased}
+        </Badge>
+      );
 
-      case 'expired':
-        return (
-          <Badge variant="destructive">
-            {t.abandonedCarts.statusExpired}
-          </Badge>
-        );
+    case 'order_created':
+      return (
+        <Badge className="bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15 border-transparent">
+          {t.abandonedCarts.statusRecovered}
+        </Badge>
+      );
 
-      default:
-        return (
-          <Badge variant="outline">
-            {status}
-          </Badge>
-        );
-    }
-  };
+    case 'expired':
+      return (
+        <Badge variant="destructive">
+          {t.abandonedCarts.statusExpired}
+        </Badge>
+      );
+
+    default:
+      return (
+        <Badge variant="outline">
+          {status}
+        </Badge>
+      );
+  }
+};
 
   /*
    * ---------------------------------------------------------
@@ -791,6 +798,7 @@ export default function AbandonCartsPage() {
       {/* =====================================================
           SELECTION TOOLBAR
       ====================================================== */}
+{console.log({cart:carts.find(i=>i.cartId=='3022299690800167444')})}
 
       {selectedCartIds.length > 0 && (
         <div className="flex items-center justify-between gap-4 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 animate-in fade-in slide-in-from-top-1 duration-200">
@@ -976,7 +984,6 @@ export default function AbandonCartsPage() {
                         }
                       />
                     </td>
-
                     <td
                       className="px-6 py-3 font-mono font-medium text-primary cursor-pointer"
                       onClick={() =>
