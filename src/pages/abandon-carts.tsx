@@ -1052,7 +1052,6 @@ const getStatusBadge = (
                         }
                       </div>
                     </td>
-
 <td className="px-6 py-3 text-right text-muted-foreground text-xs whitespace-nowrap">
   {formatSaudiDate(cart.createdAt)}
 </td>
