@@ -570,6 +570,15 @@ export default function AbandonCartsPage() {
    * ---------------------------------------------------------
    */
 
+  const formatSaudiDate = (date: string | Date) => {
+  const parsedDate = new Date(date);
+
+  return format(
+    new Date(parsedDate.getTime() - 3 * 60 * 60 * 1000),
+    'MMM d, yyyy h:mm a'
+  );
+};
+
 const getStatusBadge = (
   status: AbandonedCart['status']
 ) => {
@@ -1045,10 +1054,7 @@ const getStatusBadge = (
                     </td>
 
 <td className="px-6 py-3 text-right text-muted-foreground text-xs whitespace-nowrap">
-  {format(
-    new Date(cart.createdAt),
-    'MMM d, yyyy h:mm a'
-  )}
+  {formatSaudiDate(cart.createdAt)}
 </td>
 
                     <td className="px-6 py-3 text-right">
