@@ -1,3 +1,6 @@
-<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="279.75 94.5 340.5 480.75">
+  <!-- Back shape (lighter orange) -->
+  <polygon points="410,95 410,175 555,160 555,340 280,340 280,235" fill="#FFA300"/>
+  <!-- Front shape (darker orange/red-orange) -->
+  <polygon points="620,235 620,455 485,575 485,485 340,505 340,300" fill="#FF6A00"/>
 </svg>

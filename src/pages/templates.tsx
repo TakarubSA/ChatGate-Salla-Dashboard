@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-
+import { BroadcastBuilder } from "@/components/broadcasts/BroadcastBuilder";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +43,8 @@ import { useToast } from '@/hooks/use-toast';
 import { exportToExcel } from '@/lib/export-excel';
 import { useLanguage } from '@/hooks/use-language';
 import { useTemplates } from '@/hooks/use-template';
+import { useMarketing } from '@/hooks/use-marketing';
+import { useContacts } from '@/hooks/use-contacts';
 
 import { TemplateBuilder } from '@/components/templates/TemplateBuilder';
 
@@ -317,7 +319,6 @@ function templateToInitialValues(
 export default function TemplatesPage() {
   const { toast } = useToast();
   const { t ,language} = useLanguage();
-
   // IMPORTANT:
   // Normalize the templates translation section once.
   // This prevents "Cannot read properties of undefined".
@@ -335,6 +336,244 @@ export default function TemplatesPage() {
     uploadTemplateMedia,
     deleteTemplate,
   } = useTemplates();
+
+const {
+  createBroadcast,
+  handleTestMarketingMessage,
+  scheduleBroadcast,
+  isTesting,
+  isSubmitting,
+} = useMarketing();
+
+const { getContacts } = useContacts();
+
+const handleTest = async ({
+  phone,
+  variables,
+}: {
+  phone: string;
+  variables: string[];
+}) => {
+  if (!broadcastTemplate) {
+    return;
+  }
+
+const components = [];
+
+if (broadcastTemplate.headerImageUrl) {
+  components.push({
+    type: "header",
+    parameters: [
+      {
+        type: "image",
+        image: {
+          link: broadcastTemplate.headerImageUrl,
+        },
+      },
+    ],
+  });
+}
+
+if (variables.length > 0) {
+  components.push({
+    type: "body",
+    parameters: variables.map((value) => ({
+      type: "text",
+      text: value,
+    })),
+  });
+}
+
+  await handleTestMarketingMessage({
+    phone,
+    templateName: broadcastTemplate.name,
+    language: broadcastTemplate.language,
+    components,
+  });
+};
+
+const handleSubmitMarketingMessage = async ({
+  contactListIds,
+  variables,
+  schedule,
+  scheduledAt,
+}: {
+  contactListIds: string[];
+  variables: string[];
+  schedule: boolean;
+  scheduledAt?: string;
+}) => {
+  if (!broadcastTemplate) {
+    return;
+  }
+
+  if (contactListIds.length === 0) {
+    toast({
+      title: "No contact lists selected",
+      description:
+        "Please select at least one contact list.",
+      variant: "destructive",
+    });
+
+    return;
+  }
+
+  setIsBroadcasting(true);
+
+  try {
+    const recipients: string[] = [];
+
+    for (const listId of contactListIds) {
+      const firstPage = await getContacts(
+        listId,
+        1,
+        100,
+      );
+
+      recipients.push(...firstPage.contacts);
+
+      const totalPages =
+        firstPage.totalPages ?? 1;
+
+      for (
+        let page = 2;
+        page <= totalPages;
+        page++
+      ) {
+        const pageResult = await getContacts(
+          listId,
+          page,
+          100,
+        );
+
+        recipients.push(...pageResult.contacts);
+      }
+    }
+
+    const uniqueRecipients = Array.from(
+      new Set(
+        recipients
+          .map((phone) => phone?.trim())
+          .filter(Boolean),
+      ),
+    );
+
+    if (uniqueRecipients.length === 0) {
+      toast({
+        title: "No contacts found",
+        description:
+          "The selected contact lists do not contain any valid phone numbers.",
+        variant: "destructive",
+      });
+
+      return;
+    }
+
+    const components = [];
+
+    if (broadcastTemplate.headerImageUrl) {
+      components.push({
+        type: "header",
+        parameters: [
+          {
+            type: "image",
+            image: {
+              link:
+                broadcastTemplate.headerImageUrl,
+            },
+          },
+        ],
+      });
+    }
+
+    if (variables.length > 0) {
+      components.push({
+        type: "body",
+        parameters: variables.map((value) => ({
+          type: "text",
+          text: value,
+        })),
+      });
+    }
+
+    console.log("Broadcast:", {
+      contactListIds,
+      recipients: uniqueRecipients,
+      recipientCount:
+        uniqueRecipients.length,
+      schedule,
+      scheduledAt,
+      template: broadcastTemplate.name,
+      language: broadcastTemplate.language,
+      components,
+    });
+
+    if (schedule) {
+      if (!scheduledAt) {
+        throw new Error(
+          "Scheduled date and time are required.",
+        );
+      }
+
+      await scheduleBroadcast({
+        recipients: uniqueRecipients,
+        templateName:
+          broadcastTemplate.name,
+        language:
+          broadcastTemplate.language,
+        components,
+        scheduledAt,
+      });
+    } else {
+      await createBroadcast({
+        recipients: uniqueRecipients,
+        templateName:
+          broadcastTemplate.name,
+        language:
+          broadcastTemplate.language,
+        components,
+      });
+    }
+
+    toast({
+      title: schedule
+        ? "Broadcast scheduled"
+        : "Broadcast sent",
+      description: schedule
+        ? `Broadcast scheduled for ${scheduledAt}.`
+        : `Marketing message sent to ${uniqueRecipients.length} contacts.`,
+    });
+
+    setIsBroadcastOpen(false);
+    setBroadcastTemplate(null);
+  } catch (error) {
+    console.error(
+      "Marketing broadcast error:",
+      error,
+    );
+
+    toast({
+      title: schedule
+        ? "Failed to schedule broadcast"
+        : "Failed to send broadcast",
+      description:
+        error instanceof Error
+          ? error.message
+          : "Something went wrong.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsBroadcasting(false);
+  }
+}
+  const [broadcastTemplate, setBroadcastTemplate] =
+    useState<(typeof templates)[number] | null>(null);
+
+  const [isBroadcastOpen, setIsBroadcastOpen] =
+    useState(false);
+
+  const [isBroadcasting, setIsBroadcasting] =
+    useState(false);
 
   const [search, setSearch] =
     useState('');
@@ -707,6 +946,62 @@ export default function TemplatesPage() {
     };
 
   // ---------------------------------------------------------
+  // Broadcast
+  // ---------------------------------------------------------
+
+  const handleCreateBroadcast = async (values: {
+    phone: string;
+    variables: string[];
+  }) => {
+    if (!broadcastTemplate) {
+      return;
+    }
+
+    setIsBroadcasting(true);
+
+    try {
+      await createBroadcast({
+        to: values.phone,
+        templateName: broadcastTemplate.name,
+        language: broadcastTemplate.language,
+        components:
+          values.variables.length > 0
+            ? [
+                {
+                  type: 'body',
+                  parameters: values.variables.map(
+                    (value) => ({
+                      type: 'text',
+                      text: value,
+                    }),
+                  ),
+                },
+              ]
+            : undefined,
+      });
+
+      toast({
+        title: 'Broadcast sent',
+        description: `Marketing message sent using ${broadcastTemplate.name}.`,
+      });
+
+      setIsBroadcastOpen(false);
+      setBroadcastTemplate(null);
+    } catch (error) {
+      toast({
+        title: 'Failed to send broadcast',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Something went wrong.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsBroadcasting(false);
+    }
+  };
+
+  // ---------------------------------------------------------
   // Delete
   // ---------------------------------------------------------
 
@@ -960,9 +1255,9 @@ export default function TemplatesPage() {
                       >
 
                         {/* Name */}
-                        <td className="px-6 py-4 font-mono font-medium text-primary group-hover:underline">
-                          {tpl.name}
-                        </td>
+<td className="px-6 py-4 font-mono font-medium text-primary whitespace-nowrap max-w-[250px] truncate group-hover:underline">
+  {tpl.name}
+</td>
 
                         {/* Category */}
                         <td className="px-6 py-4">
@@ -999,55 +1294,59 @@ export default function TemplatesPage() {
                           {tpl.buttons.length}
                         </td>
 
-                        {/* Actions */}
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-end gap-1">
+{/* Actions */}
+<td className="px-6 py-4">
+  <div className="flex items-center justify-end gap-1">
 
-                            {/* Duplicate */}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              title={
-                                templateT.duplicate ??
-                                'Duplicate'
-                              }
-                              onClick={(e) => {
-                                e.stopPropagation();
+    {/* Broadcast */}
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8"
+      title="Create broadcast"
+      onClick={(e) => {
+        e.stopPropagation();
+        setBroadcastTemplate(tpl);
+        setIsBroadcastOpen(true);
+      }}
+    >
+      <MessageSquare className="h-4 w-4" />
+    </Button>
 
-                                handleDuplicate(
-                                  tpl,
-                                );
-                              }}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
+    {/* Duplicate */}
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8"
+      title={templateT.duplicate ?? "Duplicate"}
+      onClick={(e) => {
+        e.stopPropagation();
+        handleDuplicate(tpl);
+      }}
+    >
+      <Copy className="h-4 w-4" />
+    </Button>
 
-                            {/* Delete */}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              title={
-                                templateT.delete ??
-                                'Delete'
-                              }
-                              onClick={(e) => {
-                                e.stopPropagation();
+    {/* Delete */}
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8 text-destructive hover:text-destructive"
+      title={templateT.delete ?? "Delete"}
+      onClick={(e) => {
+        e.stopPropagation();
 
-                                setTemplateToDelete(
-                                  {
-                                    id: tpl.id,
-                                    name: tpl.name,
-                                  },
-                                );
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+        setTemplateToDelete({
+          id: tpl.id,
+          name: tpl.name,
+        });
+      }}
+    >
+      <Trash2 className="h-4 w-4" />
+    </Button>
 
-                          </div>
-                        </td>
+  </div>
+</td>
 
                       </tr>
                     ),
@@ -1137,6 +1436,22 @@ export default function TemplatesPage() {
           </div>
         </div>
       </div>
+
+      {/* ================================================= */}
+      {/* Broadcast Builder */}
+      {/* ================================================= */}
+
+
+
+<BroadcastBuilder
+  open={isBroadcastOpen}
+  onOpenChange={setIsBroadcastOpen}
+  template={broadcastTemplate}
+  onTest={handleTest}
+  onSubmit={handleSubmitMarketingMessage}
+  isTesting={isTesting}
+  isSubmitting={isSubmitting}
+/>
 
       {/* ================================================= */}
       {/* Template Builder */}

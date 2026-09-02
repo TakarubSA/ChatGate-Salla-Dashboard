@@ -19,6 +19,8 @@ import { MerchantProvider } from "./hooks/use-merchant";
 import AbandonCartsPage from "./pages/abandon-carts";
 import TemplatesPage from "./pages/templates";
 import CampaignsPage from "./pages/campaigns";
+import ImportContactsPage from "./pages/contacts";
+import SettingsPage from "./pages/settings";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +36,8 @@ function ProtectedRoutes() {
         <Route path="/campaigns" component={CampaignsPage} />
         <Route path="/abandon-carts" component={AbandonCartsPage} />
 <Route path="/reminder-rules" component={ReminderRulesPage} />
+<Route path="/contacts" component={ImportContactsPage} />
+<Route path="/settings" component={SettingsPage} />
         {isAdmin && <Route path="/reports" component={ReportsPage} />}
         {isAdmin && <Route path="/team" component={TeamPage} />}
        

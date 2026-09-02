@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+
 import {
   Dialog,
   DialogContent,
@@ -8,6 +10,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,83 +21,132 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+
+import { BroadcastBuilder } from '@/components/broadcasts/BroadcastBuilder';
+
 import {
   FileSpreadsheet,
-  RotateCcw,
   Search,
-  Megaphone,
-  Users,
+  MessageSquare,
   ChevronLeft,
   ChevronRight,
-  Plus,
   Copy,
   Trash2,
   Loader2,
-  Calendar,
-  Send,
-  CheckCheck,
-  Eye,
-  XCircle,
 } from 'lucide-react';
+
 import { useToast } from '@/hooks/use-toast';
 import { exportToExcel } from '@/lib/export-excel';
 import { useLanguage } from '@/hooks/use-language';
-
 import { useCampaigns } from '@/hooks/use-campaigns';
-import { CampaignBuilder, MOCK_AUDIENCES, MOCK_TEMPLATES } from '@/components/campaigns/CampaignBuilder';
-import { CampaignStatus, CampaignFormValues, Campaign, CampaignBuilderInitialValues } from '@/types/campaigns.types';
+import { useTemplates } from '@/hooks/use-template';
+import { useMarketing } from '@/hooks/use-marketing';
+import { useContacts } from '@/hooks/use-contacts';
+
+import {
+  Campaign,
+  CampaignStatus,
+} from '@/types/campaigns.types';
 
 const PAGE_SIZE = 20;
 
-const STATUS_STYLES: Record<CampaignStatus, string> = {
-  DRAFT: 'bg-muted text-muted-foreground',
-  SCHEDULED: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  SENDING: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  SENT: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  PAUSED: 'bg-slate-500/10 text-slate-600 dark:text-slate-400',
-  FAILED: 'bg-destructive/10 text-destructive',
+const STATUS_STYLES: Record<
+  CampaignStatus,
+  string
+> = {
+  DRAFT:
+    'bg-muted text-muted-foreground',
+  SCHEDULED:
+    'bg-blue-500/10 text-blue-600',
+  ACTIVE:
+    'bg-amber-500/10 text-amber-600',
+  COMPLETED:
+    'bg-green-500/10 text-green-600',
+  PAUSED:
+    'bg-muted text-muted-foreground',
+  CANCELLED:
+    'bg-red-500/10 text-red-600',
 };
 
-function formatDate(iso: string | null) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+function formatDate(
+  value: string | number | null | undefined,
+) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+    return '—';
+  }
+
+  const date =
+    typeof value === 'number'
+      ? new Date(value)
+      : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '—';
+  }
+
+  return (
+    <div className="flex flex-col">
+      <span className="text-sm text-foreground">
+        {date.toLocaleDateString()}
+      </span>
+
+      <span className="text-xs text-muted-foreground">
+        {date.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
+      </span>
+    </div>
+  );
 }
 
-// Converts the builder's form shape into a campaign creation payload.
-// Adjust field names here if your backend expects something different.
-function buildCampaignPayload(values: CampaignFormValues) {
-  const template = MOCK_TEMPLATES.find((t) => t.id === values.templateId);
-  const audience = MOCK_AUDIENCES.find((a) => a.id === values.audienceId);
-
-  return {
-    name: values.name,
-    templateId: values.templateId,
-    templateName: template?.name ?? '',
-    language: template?.language ?? 'en_US',
-    audienceName: audience?.name ?? '',
-    audienceCount: audience?.count ?? 0,
-    scheduledAt: values.scheduleNow ? null : new Date(values.scheduledAt).toISOString(),
-  };
+function formatStatus(
+  status: CampaignStatus,
+) {
+  return status
+    .toLowerCase()
+    .replace('_', ' ');
 }
 
-function campaignToInitialValues(campaign: Campaign): CampaignBuilderInitialValues {
-  return {
-    name: `${campaign.name}_copy`,
-    templateId: campaign.templateId,
-    audienceId: MOCK_AUDIENCES.find((a) => a.name === campaign.audienceName)?.id ?? '',
-    scheduleNow: true,
-    scheduledAt: '',
-  };
+function getDeliveryRate(
+  campaign: Campaign,
+) {
+  if (!campaign.totalRecipients) {
+    return 0;
+  }
+
+  return Math.round(
+    (campaign.delivered /
+      campaign.totalRecipients) *
+      100,
+  );
+}
+
+function getReadRate(
+  campaign: Campaign,
+) {
+  if (!campaign.delivered) {
+    return 0;
+  }
+
+  return Math.round(
+    (campaign.read /
+      campaign.delivered) *
+      100,
+  );
 }
 
 export default function CampaignsPage() {
   const { toast } = useToast();
   const { t } = useLanguage();
+
+  const campaignT =
+    t.campaigns ?? {};
+
   const {
     campaigns,
     pageInfo,
@@ -102,491 +154,1324 @@ export default function CampaignsPage() {
     hasPrevPage,
     isLoadingCampaigns,
     loadCampaigns,
-    createCampaign,
     deleteCampaign,
   } = useCampaigns();
 
-  const [search, setSearch] = useState('');
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
-  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [builderInitialValues, setBuilderInitialValues] =
-    useState<CampaignBuilderInitialValues | undefined>(undefined);
-  const [campaignToDelete, setCampaignToDelete] = useState<{
+  const {
+    templates,
+    isLoadingTemplates,
+    loadTemplates,
+  } = useTemplates();
+
+  const {
+    createBroadcast,
+    handleTestMarketingMessage,
+    scheduleBroadcast,
+    isTesting,
+    isSubmitting,
+  } = useMarketing();
+
+  const { getContacts } =
+    useContacts();
+
+  const [search, setSearch] =
+    useState('');
+
+  const [
+    selectedCampaignId,
+    setSelectedCampaignId,
+  ] = useState<
+    string | number | null
+  >(null);
+
+  const [
+    campaignToDelete,
+    setCampaignToDelete,
+  ] = useState<{
     id: string;
     name: string;
   } | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [
+    isDeleting,
+    setIsDeleting,
+  ] = useState(false);
+
+  const [
+    broadcastTemplate,
+    setBroadcastTemplate,
+  ] = useState<
+    (typeof templates)[number] | null
+  >(null);
+
+  const [
+    isBroadcastOpen,
+    setIsBroadcastOpen,
+  ] = useState(false);
 
   useEffect(() => {
-    loadCampaigns({ limit: PAGE_SIZE, offset: 0 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    loadCampaigns({
+      limit: PAGE_SIZE,
+      offset: 0,
+    });
+  }, [loadCampaigns]);
 
-  const goNext = () => {
-    if (!hasNextPage || !pageInfo) return;
-    loadCampaigns({ limit: PAGE_SIZE, offset: pageInfo.offset + pageInfo.limit });
-  };
+  useEffect(() => {
+    loadTemplates({
+      limit: 100,
+      offset: 0,
+    });
+  }, [loadTemplates]);
 
-  const goPrev = () => {
-    if (!hasPrevPage || !pageInfo) return;
-    const prevOffset = Math.max(pageInfo.offset - pageInfo.limit, 0);
-    loadCampaigns({ limit: PAGE_SIZE, offset: prevOffset });
-  };
+  const filteredCampaigns =
+    useMemo(() => {
+      const query =
+        search.trim().toLowerCase();
 
-  const filteredCampaigns = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return campaigns;
-    return campaigns.filter(
-      (c) =>
-        c.name?.toLowerCase().includes(q) ||
-        c.templateName?.toLowerCase().includes(q) ||
-        c.status?.toLowerCase().includes(q) ||
-        c.audienceName?.toLowerCase().includes(q)
+      if (!query) {
+        return campaigns;
+      }
+
+      return campaigns.filter(
+        (campaign) =>
+          campaign.name
+            ?.toLowerCase()
+            .includes(query) ||
+          campaign.templateName
+            ?.toLowerCase()
+            .includes(query) ||
+          campaign.status
+            ?.toLowerCase()
+            .includes(query),
+      );
+    }, [campaigns, search]);
+
+  const selectedCampaign =
+    useMemo(
+      () =>
+        campaigns.find(
+          (campaign) =>
+            campaign.id ===
+            selectedCampaignId,
+        ),
+      [
+        campaigns,
+        selectedCampaignId,
+      ],
     );
-  }, [campaigns, search]);
-
-  const selectedCampaign = useMemo(
-    () => campaigns.find((c) => c.id === selectedCampaignId),
-    [campaigns, selectedCampaignId]
-  );
 
   const handleExport = () => {
+    if (!campaigns.length) {
+      return;
+    }
+
     exportToExcel(
-      campaigns.map((c) => ({
-        [t.campaigns?.name ?? 'Name']: c.name,
-        [t.campaigns?.template ?? 'Template']: c.templateName,
-        [t.campaigns?.audience ?? 'Audience']: c.audienceName,
-        [t.campaigns?.status ?? 'Status']: c.status,
-        [t.campaigns?.scheduled ?? 'Scheduled']: formatDate(c.scheduledAt),
-        [t.campaigns?.recipients ?? 'Recipients']: c.stats.recipients,
-        [t.campaigns?.delivered ?? 'Delivered']: c.stats.delivered,
-        [t.campaigns?.read ?? 'Read']: c.stats.read,
+      campaigns.map((campaign) => ({
+        [campaignT.name ??
+          'Name']:
+          campaign.name,
+
+        [campaignT.template ??
+          'Template']:
+          campaign.templateName,
+
+        [campaignT.status ??
+          'Status']:
+          campaign.status,
+
+        [campaignT.recipients ??
+          'Recipients']:
+          campaign.totalRecipients,
+
+        [campaignT.sent ??
+          'Sent']:
+          campaign.sent,
+
+        [campaignT.delivered ??
+          'Delivered']:
+          campaign.delivered,
+
+        [campaignT.read ??
+          'Read']:
+          campaign.read,
+
+        [campaignT.failed ??
+          'Failed']:
+          campaign.failed,
+
+        [campaignT.createdAt ??
+          'Created At']:
+          campaign.createdAt
+            ? new Date(
+                campaign.createdAt,
+              ).toLocaleString()
+            : '',
       })),
-      `campaigns-${new Date().toISOString().slice(0, 10)}`,
-      t.campaigns?.title ?? 'Campaigns'
+      `campaigns-${new Date()
+        .toISOString()
+        .slice(0, 10)}`,
+      campaignT.title ??
+        'Campaigns',
     );
+
     toast({
-      title: t.campaigns?.exportSuccessTitle ?? 'Export ready',
-      description: t.campaigns?.exportSuccessDescription ?? 'Campaigns were exported to Excel.',
+      title:
+        campaignT.exportSuccessTitle ??
+        'Export ready',
+
+      description:
+        campaignT.exportSuccessDescription ??
+        'Campaigns were exported successfully.',
     });
   };
 
-  const openNewCampaign = () => {
-    setBuilderInitialValues(undefined);
-    setIsBuilderOpen(true);
+  const goNext = () => {
+    if (
+      !pageInfo ||
+      !hasNextPage ||
+      isLoadingCampaigns
+    ) {
+      return;
+    }
+
+    loadCampaigns({
+      limit: PAGE_SIZE,
+      offset:
+        pageInfo.offset +
+        pageInfo.limit,
+    });
   };
 
-  const handleDuplicate = (campaign: Campaign) => {
-    setBuilderInitialValues(campaignToInitialValues(campaign));
-    setIsBuilderOpen(true);
+  const goPrev = () => {
+    if (
+      !pageInfo ||
+      !hasPrevPage ||
+      isLoadingCampaigns
+    ) {
+      return;
+    }
+
+    loadCampaigns({
+      limit: PAGE_SIZE,
+      offset: Math.max(
+        pageInfo.offset -
+          pageInfo.limit,
+        0,
+      ),
+    });
   };
 
-  const handleCreateCampaign = async (values: CampaignFormValues) => {
-    setIsCreating(true);
-    try {
-      const payload = buildCampaignPayload(values);
-      await createCampaign(payload);
+  const openBroadcast = (
+    template: (typeof templates)[number],
+  ) => {
+    setBroadcastTemplate(
+      template,
+    );
 
-      toast({
-        title: t.campaigns?.createSuccessTitle ?? 'Campaign created',
-        description: values.scheduleNow
-          ? t.campaigns?.createSuccessNowDescription ?? 'Your campaign is being sent.'
-          : t.campaigns?.createSuccessScheduledDescription ?? 'Your campaign has been scheduled.',
+    setIsBroadcastOpen(true);
+  };
+
+  const handleTest = async ({
+    phone,
+    variables,
+  }: {
+    phone: string;
+    variables: string[];
+  }) => {
+    if (!broadcastTemplate) {
+      return;
+    }
+
+    const components: any[] = [];
+
+    if (
+      broadcastTemplate.headerImageUrl
+    ) {
+      components.push({
+        type: 'header',
+        parameters: [
+          {
+            type: 'image',
+            image: {
+              link:
+                broadcastTemplate.headerImageUrl,
+            },
+          },
+        ],
       });
+    }
 
-      setIsBuilderOpen(false);
-      setBuilderInitialValues(undefined);
-      loadCampaigns({ limit: PAGE_SIZE, offset: 0 });
-    } catch (error) {
+    if (variables.length > 0) {
+      components.push({
+        type: 'body',
+        parameters:
+          variables.map(
+            (value) => ({
+              type: 'text',
+              text: value,
+            }),
+          ),
+      });
+    }
+
+    await handleTestMarketingMessage({
+      phone,
+      templateName:
+        broadcastTemplate.name,
+      language:
+        broadcastTemplate.language,
+      components,
+    });
+  };
+
+  const handleSubmit = async ({
+    contactListIds,
+    variables,
+    schedule,
+    scheduledAt,
+  }: {
+    contactListIds: string[];
+    variables: string[];
+    schedule: boolean;
+    scheduledAt?: string;
+  }) => {
+    if (!broadcastTemplate) {
+      return;
+    }
+
+    if (!contactListIds.length) {
       toast({
-        title: t.campaigns?.createErrorTitle ?? 'Failed to create campaign',
+        title:
+          'No contact lists selected',
         description:
-          error instanceof Error
-            ? error.message
-            : t.campaigns?.createErrorDescription ?? 'Something went wrong.',
+          'Please select at least one contact list.',
         variant: 'destructive',
       });
-    } finally {
-      setIsCreating(false);
+
+      return;
     }
-  };
 
-  const handleConfirmDelete = async () => {
-    if (!campaignToDelete) return;
-    setIsDeleting(true);
     try {
-      await deleteCampaign(campaignToDelete.id);
+      const recipients: string[] =
+        [];
 
-      toast({
-        title: t.campaigns?.deleteSuccessTitle ?? 'Campaign deleted',
-        description: t.campaigns?.deleteSuccessDescription ?? 'The campaign was removed.',
-      });
+      for (const listId of contactListIds) {
+        const firstPage =
+          await getContacts(
+            listId,
+            1,
+            100,
+          );
 
-      setCampaignToDelete(null);
-      if (selectedCampaignId === campaignToDelete.id) {
-        setSelectedCampaignId(null);
+        recipients.push(
+          ...firstPage.contacts,
+        );
+
+        const totalPages =
+          firstPage.totalPages ?? 1;
+
+        for (
+          let page = 2;
+          page <= totalPages;
+          page++
+        ) {
+          const result =
+            await getContacts(
+              listId,
+              page,
+              100,
+            );
+
+          recipients.push(
+            ...result.contacts,
+          );
+        }
       }
-      loadCampaigns({ limit: PAGE_SIZE, offset: pageInfo?.offset ?? 0 });
+
+      const uniqueRecipients =
+        Array.from(
+          new Set(
+            recipients
+              .map((phone) =>
+                phone?.trim(),
+              )
+              .filter(Boolean),
+          ),
+        );
+
+      if (!uniqueRecipients.length) {
+        toast({
+          title:
+            'No contacts found',
+          description:
+            'The selected contact lists do not contain any valid phone numbers.',
+          variant: 'destructive',
+        });
+
+        return;
+      }
+
+      const components: any[] =
+        [];
+
+      if (
+        broadcastTemplate.headerImageUrl
+      ) {
+        components.push({
+          type: 'header',
+          parameters: [
+            {
+              type: 'image',
+              image: {
+                link:
+                  broadcastTemplate.headerImageUrl,
+              },
+            },
+          ],
+        });
+      }
+
+      if (variables.length > 0) {
+        components.push({
+          type: 'body',
+          parameters:
+            variables.map(
+              (value) => ({
+                type: 'text',
+                text: value,
+              }),
+            ),
+        });
+      }
+
+      if (schedule) {
+        if (!scheduledAt) {
+          throw new Error(
+            'Scheduled date and time are required.',
+          );
+        }
+
+        await scheduleBroadcast({
+          recipients:
+            uniqueRecipients,
+          templateName:
+            broadcastTemplate.name,
+          language:
+            broadcastTemplate.language,
+          components,
+          scheduledAt,
+        });
+      } else {
+        await createBroadcast({
+          recipients:
+            uniqueRecipients,
+          templateName:
+            broadcastTemplate.name,
+          language:
+            broadcastTemplate.language,
+          components,
+        });
+      }
+
+      toast({
+        title: schedule
+          ? 'Campaign scheduled'
+          : 'Campaign sent',
+
+        description: schedule
+          ? `Campaign scheduled for ${scheduledAt}.`
+          : `Campaign sent to ${uniqueRecipients.length} contacts.`,
+      });
+
+      setIsBroadcastOpen(false);
+      setBroadcastTemplate(null);
+
+      await loadCampaigns({
+        limit: PAGE_SIZE,
+        offset: 0,
+      });
     } catch (error) {
       toast({
-        title: t.campaigns?.deleteErrorTitle ?? 'Failed to delete campaign',
+        title: schedule
+          ? 'Failed to schedule campaign'
+          : 'Failed to send campaign',
+
         description:
           error instanceof Error
             ? error.message
-            : t.campaigns?.deleteErrorDescription ?? 'Something went wrong.',
+            : 'Something went wrong.',
+
         variant: 'destructive',
       });
-    } finally {
-      setIsDeleting(false);
     }
   };
+
+  const handleDuplicate = (
+    campaign: Campaign,
+  ) => {
+    const template =
+      templates.find(
+        (item) =>
+          item.name ===
+          campaign.templateName,
+      );
+
+    if (!template) {
+      toast({
+        title:
+          'Template not found',
+        description:
+          'The template used by this campaign is no longer available.',
+        variant: 'destructive',
+      });
+
+      return;
+    }
+
+    openBroadcast(template);
+  };
+
+  const handleConfirmDelete =
+    async () => {
+      if (!campaignToDelete) {
+        return;
+      }
+
+      setIsDeleting(true);
+
+      try {
+        await deleteCampaign(
+          campaignToDelete.id,
+        );
+
+        toast({
+          title:
+            'Campaign deleted',
+
+          description:
+            'The campaign was removed successfully.',
+        });
+
+        setCampaignToDelete(
+          null,
+        );
+
+        if (
+          selectedCampaignId ===
+          campaignToDelete.id
+        ) {
+          setSelectedCampaignId(
+            null,
+          );
+        }
+
+        await loadCampaigns({
+          limit: PAGE_SIZE,
+          offset:
+            pageInfo?.offset ??
+            0,
+        });
+      } catch (error) {
+        toast({
+          title:
+            'Failed to delete campaign',
+
+          description:
+            error instanceof Error
+              ? error.message
+              : 'Something went wrong.',
+
+          variant: 'destructive',
+        });
+      } finally {
+        setIsDeleting(false);
+      }
+    };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+
+      {/* Header */}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            {t.campaigns?.title ?? 'Campaigns'}
+            {campaignT.title ??
+              'Campaigns'}
           </h1>
+
           <p className="text-muted-foreground mt-1">
-            {t.campaigns?.pageSubtitle ?? 'Send template messages to your audiences and track delivery'}
+            {campaignT.pageSubtitle ??
+              'Manage your WhatsApp campaigns.'}
           </p>
         </div>
+
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExport}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExport}
+            disabled={
+              campaigns.length ===
+              0
+            }
+          >
             <FileSpreadsheet className="h-4 w-4 mr-2" />
-            {t.campaigns?.exportPage ?? 'Export'}
+
+            {campaignT.exportPage ??
+              'Export'}
           </Button>
-          <Button size="sm" onClick={openNewCampaign}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t.campaigns?.newCampaign ?? 'New Campaign'}
+
+          <Button
+            size="sm"
+            onClick={() =>
+              setIsBroadcastOpen(
+                false,
+              ) ||
+              setBroadcastTemplate(
+                null,
+              )
+            }
+          >
+            {campaignT.newCampaign ??
+              'New Campaign'}
           </Button>
         </div>
       </div>
 
+      {/* Search */}
+
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-end gap-4 justify-between">
-          <div className="space-y-1 w-full sm:w-[280px]">
+          <div className="space-y-1 w-full sm:w-[320px]">
             <label className="text-sm font-medium text-muted-foreground">
-              {t.campaigns?.search ?? 'Search'}
+              {campaignT.search ??
+                'Search'}
             </label>
+
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+
               <Input
-                placeholder={t.campaigns?.searchHint ?? 'Name, template, status...'}
+                placeholder={
+                  campaignT.searchHint ??
+                  'Name, template, status...'
+                }
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) =>
+                  setSearch(
+                    e.target.value,
+                  )
+                }
                 className="pl-9 w-full"
               />
             </div>
           </div>
         </div>
 
+        {/* Table */}
+
         <div className="border border-border rounded-lg bg-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
+
               <thead className="text-xs text-muted-foreground bg-muted/50 uppercase border-b border-border">
                 <tr>
-                  <th className="px-6 py-3">{t.campaigns?.name ?? 'Name'}</th>
-                  <th className="px-6 py-3">{t.campaigns?.template ?? 'Template'}</th>
-                  <th className="px-6 py-3">{t.campaigns?.audience ?? 'Audience'}</th>
-                  <th className="px-6 py-3">{t.campaigns?.status ?? 'Status'}</th>
-                  <th className="px-6 py-3">{t.campaigns?.scheduled ?? 'Scheduled'}</th>
-                  <th className="px-6 py-3">{t.campaigns?.delivered ?? 'Delivered'}</th>
-                  <th className="px-6 py-3 text-right">
-                    {t.campaigns?.actions ?? 'Actions'}
+
+                  <th className="px-6 py-3">
+                    {campaignT.name ??
+                      'Name'}
                   </th>
+
+                  <th className="px-6 py-3">
+                    {campaignT.template ??
+                      'Template'}
+                  </th>
+
+                  <th className="px-6 py-3">
+                    {campaignT.status ??
+                      'Status'}
+                  </th>
+
+                  <th className="px-6 py-3">
+                    {campaignT.recipients ??
+                      'Recipients'}
+                  </th>
+
+                  <th className="px-6 py-3">
+                    {campaignT.sent ??
+                      'Sent'}
+                  </th>
+
+                  <th className="px-6 py-3">
+                    {campaignT.delivered ??
+                      'Delivered'}
+                  </th>
+
+                  <th className="px-6 py-3">
+                    {campaignT.read ??
+                      'Read'}
+                  </th>
+
+                  <th className="px-6 py-3">
+                    {campaignT.failed ??
+                      'Failed'}
+                  </th>
+
+                  <th className="px-6 py-3">
+                    {campaignT.createdAt ??
+                      'Created At'}
+                  </th>
+
+                  <th className="px-6 py-3 text-right">
+                    {campaignT.actions ??
+                      'Actions'}
+                  </th>
+
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-border">
+
                 {isLoadingCampaigns ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-muted-foreground">
-                      <div className="flex items-center justify-center">
-                        <RotateCcw className="h-5 w-5 animate-spin mr-2" />
-                        {t.campaigns?.loading ?? 'Loading campaigns...'}
+                    <td
+                      colSpan={10}
+                      className="px-6 py-10 text-center text-muted-foreground"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+
+                        {campaignT.loading ??
+                          'Loading campaigns...'}
                       </div>
                     </td>
                   </tr>
-                ) : filteredCampaigns.length === 0 ? (
+                ) : filteredCampaigns.length ===
+                  0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
-                      <Megaphone className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <td
+                      colSpan={10}
+                      className="px-6 py-12 text-center"
+                    >
+                      <MessageSquare className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+
                       <p className="text-muted-foreground font-medium">
-                        {t.campaigns?.noCampaignsFound ?? 'No campaigns found'}
+                        {campaignT.noCampaignsFound ??
+                          'No campaigns found'}
                       </p>
+
                       <p className="text-xs text-muted-foreground/70 mt-1">
-                        {t.campaigns?.tryAdjustingSearch ?? 'Try adjusting your search'}
+                        {campaignT.tryAdjustingSearch ??
+                          'Try adjusting your search'}
                       </p>
                     </td>
                   </tr>
                 ) : (
-                  filteredCampaigns.map((c) => (
-                    <tr
-                      key={c.id}
-                      className="hover:bg-muted/30 transition-colors cursor-pointer group"
-                      onClick={() => setSelectedCampaignId(c.id)}
-                    >
-                      <td className="px-6 py-4 font-medium text-primary group-hover:underline">
-                        {c.name}
-                      </td>
-                      <td className="px-6 py-4 font-mono text-xs text-muted-foreground">
-                        {c.templateName}
-                      </td>
-                      <td className="px-6 py-4 text-muted-foreground">
-                        <span className="inline-flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5" />
-                          {c.audienceName}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full capitalize ${STATUS_STYLES[c.status]}`}
-                        >
-                          {c.status.toLowerCase()}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-muted-foreground">
-                        <span className="inline-flex items-center gap-1">
-                          <Calendar className="h-3.5 w-3.5" />
-                          {formatDate(c.scheduledAt)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-muted-foreground">
-                        {c.stats.sent > 0
-                          ? `${c.stats.delivered.toLocaleString()} / ${c.stats.recipients.toLocaleString()}`
-                          : '—'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            title={t.campaigns?.duplicate ?? 'Duplicate'}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDuplicate(c);
-                            }}
+                  filteredCampaigns.map(
+                    (campaign) => (
+                      <tr
+                        key={
+                          campaign.id
+                        }
+                        className="hover:bg-muted/30 transition-colors cursor-pointer group"
+                        onClick={() =>
+                          setSelectedCampaignId(
+                            campaign.id,
+                          )
+                        }
+                      >
+
+                        {/* Name */}
+
+                        <td className="px-6 py-4 font-medium whitespace-nowrap max-w-[220px]">
+                          <span className="truncate block group-hover:text-primary">
+                            {
+                              campaign.name
+                            }
+                          </span>
+                        </td>
+
+                        {/* Template */}
+
+                        <td className="px-6 py-4 font-mono text-xs text-muted-foreground whitespace-nowrap max-w-[220px]">
+                          <span className="truncate block">
+                            {
+                              campaign.templateName
+                            }
+                          </span>
+                        </td>
+
+                        {/* Status */}
+
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${STATUS_STYLES[campaign.status]}`}
                           >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            title={t.campaigns?.delete ?? 'Delete'}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setCampaignToDelete({ id: c.id, name: c.name });
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                            {formatStatus(
+                              campaign.status,
+                            )}
+                          </span>
+                        </td>
+
+                        {/* Recipients */}
+
+                        <td className="px-6 py-4 text-muted-foreground">
+                          {campaign.totalRecipients.toLocaleString()}
+                        </td>
+
+                        {/* Sent */}
+
+                        <td className="px-6 py-4 text-muted-foreground">
+                          {campaign.sent.toLocaleString()}
+                        </td>
+
+                        {/* Delivered */}
+
+                        <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
+                          {
+                            campaign.delivered
+                          }
+
+                          <span className="text-xs ml-1">
+                            (
+                            {
+                              getDeliveryRate(
+                                campaign,
+                              )
+                            }
+                            %)
+                          </span>
+                        </td>
+
+                        {/* Read */}
+
+                        <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
+                          {
+                            campaign.read
+                          }
+
+                          <span className="text-xs ml-1">
+                            (
+                            {
+                              getReadRate(
+                                campaign,
+                              )
+                            }
+                            %)
+                          </span>
+                        </td>
+
+                        {/* Failed */}
+
+                        <td className="px-6 py-4 text-muted-foreground">
+                          {
+                            campaign.failed
+                          }
+                        </td>
+
+                        {/* Created */}
+
+                        <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
+                          {formatDate(
+                            campaign.createdAt,
+                          )}
+                        </td>
+
+                        {/* Actions */}
+
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-1">
+
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title={
+                                campaignT.duplicate ??
+                                'Duplicate'
+                              }
+                              onClick={(
+                                event,
+                              ) => {
+                                event.stopPropagation();
+
+                                handleDuplicate(
+                                  campaign,
+                                );
+                              }}
+                              disabled={
+                                isLoadingTemplates
+                              }
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              title={
+                                campaignT.delete ??
+                                'Delete'
+                              }
+                              onClick={(
+                                event,
+                              ) => {
+                                event.stopPropagation();
+
+                                setCampaignToDelete(
+                                  {
+                                    id: String(
+                                      campaign.id,
+                                    ),
+                                    name:
+                                      campaign.name,
+                                  },
+                                );
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+
+                          </div>
+                        </td>
+
+                      </tr>
+                    ),
+                  )
                 )}
+
               </tbody>
             </table>
           </div>
         </div>
 
+        {/* Pagination */}
+
         <div className="flex items-center justify-between text-sm text-muted-foreground">
+
           <div>
             {pageInfo
-              ? (t.campaigns?.showingCampaigns ?? 'Showing {{from}}–{{to}} of {{total}} campaigns')
-                  .replace('{{from}}', String(pageInfo.offset + 1))
-                  .replace('{{to}}', String(pageInfo.offset + pageInfo.count))
-                  .replace('{{total}}', String(pageInfo.total))
-              : (t.campaigns?.campaignsCount ?? '{{count}} campaigns').replace(
-                  '{{count}}',
-                  String(filteredCampaigns.length)
-                )}
+              ? (
+                  campaignT.showingCampaigns ??
+                  'Showing {{from}}–{{to}} of {{total}} campaigns'
+                )
+                  .replace(
+                    '{{from}}',
+                    String(
+                      pageInfo.offset +
+                        1,
+                    ),
+                  )
+                  .replace(
+                    '{{to}}',
+                    String(
+                      pageInfo.offset +
+                        pageInfo.count,
+                    ),
+                  )
+                  .replace(
+                    '{{total}}',
+                    String(
+                      pageInfo.total,
+                    ),
+                  )
+              : ''}
           </div>
+
           <div className="flex items-center gap-2">
+
             <Button
               variant="outline"
               size="sm"
               onClick={goPrev}
-              disabled={isLoadingCampaigns || !hasPrevPage}
+              disabled={
+                isLoadingCampaigns ||
+                !hasPrevPage
+              }
             >
               <ChevronLeft className="h-4 w-4 mr-1" />
-              {t.campaigns?.previous ?? 'Previous'}
+
+              {campaignT.previous ??
+                'Previous'}
             </Button>
+
             <Button
               variant="outline"
               size="sm"
               onClick={goNext}
-              disabled={isLoadingCampaigns || !hasNextPage}
+              disabled={
+                isLoadingCampaigns ||
+                !hasNextPage
+              }
             >
-              {t.campaigns?.next ?? 'Next'}
+              {campaignT.next ??
+                'Next'}
+
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
+
           </div>
         </div>
       </div>
 
-      <CampaignBuilder
-        open={isBuilderOpen}
+      {/* Broadcast Builder */}
+
+      <BroadcastBuilder
+        open={isBroadcastOpen}
         onOpenChange={(open) => {
-          setIsBuilderOpen(open);
-          if (!open) setBuilderInitialValues(undefined);
+          setIsBroadcastOpen(
+            open,
+          );
+
+          if (!open) {
+            setBroadcastTemplate(
+              null,
+            );
+          }
         }}
-        onSubmit={handleCreateCampaign}
-        initialValues={builderInitialValues}
-        isSubmitting={isCreating}
-        title={
-          builderInitialValues
-            ? t.campaigns?.duplicateCampaign ?? 'Duplicate Campaign'
-            : t.campaigns?.newCampaign ?? 'New Campaign'
+        template={
+          broadcastTemplate
         }
-        description={
-          t.campaigns?.newCampaignDescription ??
-          'Send a template message to a chosen audience.'
+        onTest={handleTest}
+        onSubmit={handleSubmit}
+        isTesting={isTesting}
+        isSubmitting={
+          isSubmitting
         }
-        submitLabel={t.campaigns?.submitCampaign ?? 'Create campaign'}
       />
 
+      {/* Campaign Details */}
+
       <Dialog
-        open={selectedCampaignId !== null}
-        onOpenChange={(open) => !open && setSelectedCampaignId(null)}
+        open={
+          selectedCampaignId !==
+          null
+        }
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedCampaignId(
+              null,
+            );
+          }
+        }}
       >
-        <DialogContent className="!w-auto !max-w-2xl">
+        <DialogContent className="!w-auto !max-w-3xl">
+
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span>{selectedCampaign?.name || '...'}</span>
+            <DialogTitle>
+              {selectedCampaign?.name ??
+                'Campaign'}
             </DialogTitle>
           </DialogHeader>
-          {selectedCampaign ? (
+
+          {selectedCampaign && (
             <div className="space-y-6 mt-4">
+
               <div className="flex justify-between items-start p-4 bg-muted/30 rounded-lg border border-border">
+
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    {t.campaigns?.template ?? 'Template'}
+                    {campaignT.template ??
+                      'Template'}
                   </p>
-                  <p className="font-mono text-sm font-medium mt-1">{selectedCampaign.templateName}</p>
+
+                  <p className="font-medium mt-1 font-mono text-sm">
+                    {
+                      selectedCampaign.templateName
+                    }
+                  </p>
                 </div>
+
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground">
-                    {t.campaigns?.status ?? 'Status'}
+                    {campaignT.status ??
+                      'Status'}
                   </p>
-                  <span
-                    className={`inline-block mt-1 text-xs font-medium px-2 py-1 rounded-full capitalize ${STATUS_STYLES[selectedCampaign.status]}`}
-                  >
-                    {selectedCampaign.status.toLowerCase()}
-                  </span>
+
+                  <p className="font-medium mt-1 capitalize">
+                    {formatStatus(
+                      selectedCampaign.status,
+                    )}
+                  </p>
                 </div>
+
                 <div className="text-right">
                   <p className="text-sm text-muted-foreground">
-                    {t.campaigns?.scheduled ?? 'Scheduled'}
+                    {campaignT.language ??
+                      'Language'}
                   </p>
-                  <p className="font-medium mt-1">{formatDate(selectedCampaign.scheduledAt)}</p>
+
+                  <p className="font-medium mt-1">
+                    {
+                      selectedCampaign.language
+                    }
+                  </p>
                 </div>
+
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+
+                <div className="rounded-lg border border-border p-4">
+                  <p className="text-xs text-muted-foreground">
+                    {campaignT.recipients ??
+                      'Recipients'}
+                  </p>
+
+                  <p className="text-xl font-semibold mt-1">
+                    {
+                      selectedCampaign.totalRecipients
+                    }
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-border p-4">
+                  <p className="text-xs text-muted-foreground">
+                    {campaignT.sent ??
+                      'Sent'}
+                  </p>
+
+                  <p className="text-xl font-semibold mt-1">
+                    {
+                      selectedCampaign.sent
+                    }
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-border p-4">
+                  <p className="text-xs text-muted-foreground">
+                    {campaignT.delivered ??
+                      'Delivered'}
+                  </p>
+
+                  <p className="text-xl font-semibold mt-1">
+                    {
+                      selectedCampaign.delivered
+                    }
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-border p-4">
+                  <p className="text-xs text-muted-foreground">
+                    {campaignT.read ??
+                      'Read'}
+                  </p>
+
+                  <p className="text-xl font-semibold mt-1">
+                    {
+                      selectedCampaign.read
+                    }
+                  </p>
+                </div>
+
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    {campaignT.failed ??
+                      'Failed'}
+                  </p>
+
+                  <p className="font-medium">
+                    {
+                      selectedCampaign.failed
+                    }
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    {campaignT.pending ??
+                      'Pending'}
+                  </p>
+
+                  <p className="font-medium">
+                    {
+                      selectedCampaign.pending
+                    }
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    {campaignT.messageCount ??
+                      'Messages'}
+                  </p>
+
+                  <p className="font-medium">
+                    {
+                      selectedCampaign.messageCount
+                    }
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    {campaignT.createdAt ??
+                      'Created At'}
+                  </p>
+
+                  <div className="font-medium">
+                    {formatDate(
+                      selectedCampaign.createdAt,
+                    )}
+                  </div>
+                </div>
+
               </div>
 
               <div>
-                <p className="text-muted-foreground mb-2 text-sm flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5" />
-                  {t.campaigns?.audience ?? 'Audience'}: {selectedCampaign.audienceName}
+                <p className="text-sm text-muted-foreground mb-2">
+                  {campaignT.deliveryRate ??
+                    'Delivery rate'}
                 </p>
-                <div className="grid grid-cols-4 gap-3">
-                  <div className="p-3 rounded-lg border border-border text-center">
-                    <Send className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                    <p className="text-lg font-semibold">{selectedCampaign.stats.sent.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">{t.campaigns?.sent ?? 'Sent'}</p>
-                  </div>
-                  <div className="p-3 rounded-lg border border-border text-center">
-                    <CheckCheck className="h-4 w-4 mx-auto mb-1 text-emerald-500" />
-                    <p className="text-lg font-semibold">{selectedCampaign.stats.delivered.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">{t.campaigns?.delivered ?? 'Delivered'}</p>
-                  </div>
-                  <div className="p-3 rounded-lg border border-border text-center">
-                    <Eye className="h-4 w-4 mx-auto mb-1 text-blue-500" />
-                    <p className="text-lg font-semibold">{selectedCampaign.stats.read.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">{t.campaigns?.read ?? 'Read'}</p>
-                  </div>
-                  <div className="p-3 rounded-lg border border-border text-center">
-                    <XCircle className="h-4 w-4 mx-auto mb-1 text-destructive" />
-                    <p className="text-lg font-semibold">{selectedCampaign.stats.failed.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">{t.campaigns?.failed ?? 'Failed'}</p>
-                  </div>
+
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full"
+                    style={{
+                      width: `${getDeliveryRate(
+                        selectedCampaign,
+                      )}%`,
+                    }}
+                  />
                 </div>
+
+                <p className="text-xs text-muted-foreground mt-2">
+                  {
+                    getDeliveryRate(
+                      selectedCampaign,
+                    )
+                  }
+                  %
+                </p>
               </div>
 
-              <DialogFooter className="gap-2 sm:justify-between">
-                <Button
-                  variant="destructive"
-                  onClick={() =>
-                    setCampaignToDelete({
-                      id: selectedCampaign.id,
-                      name: selectedCampaign.name,
-                    })
-                  }
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {t.campaigns?.delete ?? 'Delete'}
-                </Button>
+              <DialogFooter>
                 <Button
                   variant="outline"
                   onClick={() => {
-                    handleDuplicate(selectedCampaign);
-                    setSelectedCampaignId(null);
+                    handleDuplicate(
+                      selectedCampaign,
+                    );
+
+                    setSelectedCampaignId(
+                      null,
+                    );
                   }}
+                  disabled={
+                    isLoadingTemplates
+                  }
                 >
                   <Copy className="h-4 w-4 mr-2" />
-                  {t.campaigns?.duplicate ?? 'Duplicate'}
+
+                  {campaignT.duplicate ??
+                    'Duplicate'}
+                </Button>
+
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setCampaignToDelete(
+                      {
+                        id: String(
+                          selectedCampaign.id,
+                        ),
+                        name:
+                          selectedCampaign.name,
+                      },
+                    );
+
+                    setSelectedCampaignId(
+                      null,
+                    );
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+
+                  {campaignT.delete ??
+                    'Delete'}
                 </Button>
               </DialogFooter>
-            </div>
-          ) : (
-            <div className="py-8 text-center text-muted-foreground">
-              {t.campaigns?.failedToLoadDetails ?? 'Failed to load campaign details'}
+
             </div>
           )}
+
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirmation */}
+
       <AlertDialog
-        open={campaignToDelete !== null}
-        onOpenChange={(open) => !open && setCampaignToDelete(null)}
+        open={
+          campaignToDelete !==
+          null
+        }
+        onOpenChange={(open) => {
+          if (!open) {
+            setCampaignToDelete(
+              null,
+            );
+          }
+        }}
       >
         <AlertDialogContent>
+
           <AlertDialogHeader>
+
             <AlertDialogTitle>
-              {t.campaigns?.deleteConfirmTitle ?? 'Delete campaign'}
+              {campaignT.deleteConfirmTitle ??
+                'Delete campaign?'}
             </AlertDialogTitle>
+
             <AlertDialogDescription>
               {(
-                t.campaigns?.deleteConfirmDescription ??
+                campaignT.deleteConfirmDescription ??
                 'This will permanently delete "{{name}}". This action cannot be undone.'
-              ).replace('{{name}}', campaignToDelete?.name ?? '')}
+              ).replace(
+                '{{name}}',
+                campaignToDelete?.name ??
+                  '',
+              )}
             </AlertDialogDescription>
+
           </AlertDialogHeader>
+
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>
-              {t.campaigns?.cancel ?? 'Cancel'}
+
+            <AlertDialogCancel
+              disabled={isDeleting}
+            >
+              {campaignT.cancel ??
+                'Cancel'}
             </AlertDialogCancel>
+
             <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
+              onClick={(event) => {
+                event.preventDefault();
+
                 handleConfirmDelete();
               }}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Trash2 className="h-4 w-4 mr-2" />
+              {isDeleting && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              {t.campaigns?.delete ?? 'Delete'}
+
+              {campaignT.delete ??
+                'Delete'}
             </AlertDialogAction>
+
           </AlertDialogFooter>
+
         </AlertDialogContent>
       </AlertDialog>
+
     </div>
   );
 }

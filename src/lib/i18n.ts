@@ -3,6 +3,8 @@ export type Language = 'en' | 'ar';
 export const translations = {
   en: {
     nav: {
+      settings:"Settings",
+      contacts:"Contacts",
       dashboard: 'Dashboard',
       orders: 'Orders',
       campaigns:"Campaigns",
@@ -12,6 +14,83 @@ export const translations = {
       templates:"Templates",
       reminderRules: 'Reminder Rules',
     },
+    settings: {
+  title: "Settings",
+  description: "Configure your WhatsApp connection.",
+  whatsapp: "WhatsApp",
+  whatsappDescription: "Configure your WhatsApp and 360dialog credentials.",
+  whatsappNumber: "WhatsApp Number",
+  whatsappNumberPlaceholder: "+966 55 XXX XXXX",
+  phoneNumberId: "360dialog Phone Number ID",
+  phoneNumberIdPlaceholder: "Phone Number ID",
+  apiKey: "360dialog API Key",
+  apiKeyPlaceholder: "Enter API key",
+  showApiKey: "Show API key",
+  hideApiKey: "Hide API key",
+  save: "Save Changes",
+  saving: "Saving...",
+},
+    
+    contacts: {
+  title: "Import Contacts",
+  subtitle: "Import a list of contacts using phone numbers.",
+
+  uploadContacts: "Upload contacts",
+  uploadDescription:
+    "Upload an Excel or CSV file containing a phone_no column.",
+
+  internationalFormat:
+    "Use international format: calling code + phone number.",
+
+  example: "Example: 966551753513",
+
+  dropFile: "Drop your file here",
+  clickToBrowse: "or click to browse",
+  supportedFiles: "XLSX, XLS or CSV",
+
+  contactListName: "Contact list name",
+  contactListPlaceholder: "e.g. September Customers",
+  contactListHint:
+    "Give this list a name so you can easily identify it later.",
+
+  processingTitle: "Importing contacts...",
+  processingDescription:
+    "Reading phone_no and uploading the file.",
+
+  importedContacts: "{{count}} contacts",
+  successfullyImported: "Successfully imported",
+
+  importedNumbers: "Imported numbers",
+  uniquePhoneNumbers: "{{count}} unique phone numbers",
+
+  noContactsImported: "No contacts imported",
+  noContactsDescription:
+    "Upload a file containing a phone_no column to get started.",
+
+  selectFile: "Select a file",
+  selectFileDescription:
+    "Please upload a contacts file first.",
+
+  listNameRequired: "List name required",
+  listNameRequiredDescription:
+    "Please enter a name for this contact list.",
+
+  invalidFile: "Invalid file",
+  invalidFileDescription:
+    "Please upload an Excel or CSV file.",
+
+  importFailed: "Import failed",
+  importFailedDescription:
+    "Something went wrong while importing contacts.",
+
+  importedSuccess: "Contacts imported",
+  importedSuccessDescription:
+    '"{{name}}" was imported successfully with {{count}} contacts.',
+
+  cancel: "Cancel",
+  importing: "Importing...",
+  importContacts: "Import Contacts",
+},
         campaigns: {
       title:"Campaigns",
         pageSubtitle: 'Send template messages to your audiences and track delivery',
@@ -461,6 +540,8 @@ image: 'Image',
 
 ar: {
   nav: {
+    settings:"الإعدادات",
+    contacts:"جهات الاتصال",
     dashboard: 'لوحة التحكم',
     orders: 'الطلبات',
     abandonCarts: 'السلات المتروكة',
@@ -470,7 +551,84 @@ ar: {
     templates: 'القوالب',
     campaigns: 'الحملات',
   },
+settings: {
+  title: "الإعدادات",
+  description: "قم بإعداد اتصال واتساب الخاص بك.",
+  whatsapp: "واتساب",
+  whatsappDescription: "قم بإعداد رقم واتساب وبيانات 360dialog.",
+  whatsappNumber: "رقم واتساب",
+  whatsappNumberPlaceholder: "+966 55 XXX XXXX",
+  phoneNumberId: "معرّف رقم الهاتف في 360dialog",
+  phoneNumberIdPlaceholder: "معرّف رقم الهاتف",
+  apiKey: "مفتاح API الخاص بـ 360dialog",
+  apiKeyPlaceholder: "أدخل مفتاح API",
+  showApiKey: "إظهار مفتاح API",
+  hideApiKey: "إخفاء مفتاح API",
+  save: "حفظ التغييرات",
+  saving: "جارٍ الحفظ...",
+},
+  
 
+  contacts: {
+  title: "استيراد جهات الاتصال",
+  subtitle: "استورد قائمة من جهات الاتصال باستخدام أرقام الجوال.",
+
+  uploadContacts: "رفع جهات الاتصال",
+  uploadDescription:
+    "ارفع ملف Excel أو CSV يحتوي على عمود phone_no.",
+
+  internationalFormat:
+    "استخدم التنسيق الدولي: رمز الاتصال + رقم الجوال.",
+
+  example: "مثال: 966551753513",
+
+  dropFile: "اسحب الملف هنا",
+  clickToBrowse: "أو اضغط لاختيار الملف",
+  supportedFiles: "XLSX أو XLS أو CSV",
+
+  contactListName: "اسم قائمة جهات الاتصال",
+  contactListPlaceholder: "مثال: عملاء سبتمبر",
+  contactListHint:
+    "أدخل اسمًا للقائمة ليسهل عليك التعرف عليها لاحقًا.",
+
+  processingTitle: "جارٍ استيراد جهات الاتصال...",
+  processingDescription:
+    "جارٍ قراءة phone_no ورفع الملف.",
+
+  importedContacts: "{{count}} جهة اتصال",
+  successfullyImported: "تم الاستيراد بنجاح",
+
+  importedNumbers: "الأرقام المستوردة",
+  uniquePhoneNumbers: "{{count}} رقم جوال فريد",
+
+  noContactsImported: "لم يتم استيراد جهات اتصال",
+  noContactsDescription:
+    "ارفع ملفًا يحتوي على عمود phone_no للبدء.",
+
+  selectFile: "اختر ملفًا",
+  selectFileDescription:
+    "يرجى رفع ملف جهات الاتصال أولًا.",
+
+  listNameRequired: "اسم القائمة مطلوب",
+  listNameRequiredDescription:
+    "يرجى إدخال اسم لقائمة جهات الاتصال.",
+
+  invalidFile: "ملف غير صالح",
+  invalidFileDescription:
+    "يرجى رفع ملف Excel أو CSV.",
+
+  importFailed: "فشل الاستيراد",
+  importFailedDescription:
+    "حدث خطأ أثناء استيراد جهات الاتصال.",
+
+  importedSuccess: "تم استيراد جهات الاتصال",
+  importedSuccessDescription:
+    'تم استيراد "{{name}}" بنجاح بعدد {{count}} جهة اتصال.',
+
+  cancel: "إلغاء",
+  importing: "جارٍ الاستيراد...",
+  importContacts: "استيراد جهات الاتصال",
+},
   login: {
     title: 'مرحبًا بعودتك',
     subtitle: 'سجّل دخولك إلى حسابك في ChatGate.',

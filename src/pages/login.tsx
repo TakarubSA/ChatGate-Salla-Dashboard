@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRole } from '@/hooks/use-role';
 import { useLanguage } from '@/hooks/use-language';
-import { DEMO_PASSWORD, mockUsers } from '@/lib/mock-data';
+import { mockUsers } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,11 +44,6 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   setIsSubmitting(false);
 };
-  const fillDemo = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword(DEMO_PASSWORD);
-    setError(null);
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
