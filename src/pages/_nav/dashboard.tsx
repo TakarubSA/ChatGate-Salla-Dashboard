@@ -149,10 +149,6 @@ Price: order.items.reduce((total, item) => total + item?.totalPrice!, 0),
           <p className="text-muted-foreground mt-1">{t.dashboard.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
-            {t.common.export}
-          </Button>
           <Button
             variant="outline"
             size="sm"

@@ -77,6 +77,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       icon: Bell,
       exact: false,
     },
+       {
+      name: t.nav.attributes,
+      href: '/attributes',
+      icon: Bell,
+      exact: false,
+    },
    {
       name: t.nav.settings,
       href: '/settings',

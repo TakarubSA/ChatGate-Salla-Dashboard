@@ -3,6 +3,7 @@ export type Language = 'en' | 'ar';
 export const translations = {
   en: {
     nav: {
+      attributes:"Attributes",
       settings:"Settings",
       contacts:"Contacts",
       dashboard: 'Dashboard',
@@ -14,6 +15,84 @@ export const translations = {
       templates:"Templates",
       reminderRules: 'Reminder Rules',
     },
+    attributes: {
+  title: "Attributes",
+  subtitle: "Manage the variables available across ChatGate.",
+
+  addAttribute: "Add Attribute",
+
+  totalAttributes: "Total Attributes",
+  sheetAttributes: "Sheet Attributes",
+  webhookAttributes: "Webhook Attributes",
+
+  searchPlaceholder: "Search attributes...",
+  allSources: "All Sources",
+  allTypes: "All Types",
+
+  attribute: "Attribute",
+  name: "Name",
+  type: "Type",
+  source: "Source",
+  createdAt: "Created At",
+  actions: "Actions",
+
+  text: "Text",
+  number: "Number",
+  boolean: "Boolean",
+  date: "Date",
+
+  sheet: "Sheet",
+  webhook: "Webhook",
+  system: "System",
+
+  edit: "Edit",
+  delete: "Delete",
+
+  deleteAttribute: "Delete attribute?",
+  deleteDescription:
+    'This will remove "{{name}}" from the system. This action cannot be undone.',
+
+  cancel: "Cancel",
+  confirmDelete: "Delete",
+
+  noAttributesFound: "No attributes found",
+  noAttributesDescription:
+    "Try changing your search or filters.",
+
+  showingAttributes:
+    "Showing {{from}}–{{to}} of {{total}} attributes",
+
+  previous: "Previous",
+  next: "Next",
+
+  createAttribute: "Create Attribute",
+  editAttribute: "Edit Attribute",
+
+  attributeKey: "Attribute Key",
+  attributeKeyPlaceholder: "e.g. customer_name",
+
+  attributeName: "Attribute Name",
+  attributeNamePlaceholder: "e.g. Customer Name",
+
+  attributeType: "Attribute Type",
+
+  save: "Save",
+  saveChanges: "Save Changes",
+
+  createSuccess: "Attribute created successfully",
+  updateSuccess: "Attribute updated successfully",
+
+  createError: "Failed to create attribute",
+  updateError: "Failed to update attribute",
+  deleteError: "Failed to delete attribute",
+
+  systemAttribute: "System attribute",
+  systemAttributeDescription:
+    "System attributes cannot be deleted or modified.",
+
+  variable: "Variable",
+  variableExample: "Example: {{username}}",
+},
     settings: {
   title: "Settings",
   description: "Configure your WhatsApp connection.",
@@ -540,6 +619,7 @@ image: 'Image',
 
 ar: {
   nav: {
+    attributes:"المتغيرات",
     settings:"الإعدادات",
     contacts:"جهات الاتصال",
     dashboard: 'لوحة التحكم',
@@ -551,6 +631,84 @@ ar: {
     templates: 'القوالب',
     campaigns: 'الحملات',
   },
+  attributes: {
+  title: "المتغيرات",
+  subtitle: "إدارة المتغيرات المتاحة في ChatGate.",
+
+  addAttribute: "إضافة متغير",
+
+  totalAttributes: "إجمالي المتغيرات",
+  sheetAttributes: "متغيرات الملفات",
+  webhookAttributes: "متغيرات Webhook",
+
+  searchPlaceholder: "البحث في المتغيرات...",
+  allSources: "جميع المصادر",
+  allTypes: "جميع الأنواع",
+
+  attribute: "المتغير",
+  name: "الاسم",
+  type: "النوع",
+  source: "المصدر",
+  createdAt: "تاريخ الإنشاء",
+  actions: "الإجراءات",
+
+  text: "نص",
+  number: "رقم",
+  boolean: "منطقي",
+  date: "تاريخ",
+
+  sheet: "ملف",
+  webhook: "Webhook",
+  system: "النظام",
+
+  edit: "تعديل",
+  delete: "حذف",
+
+  deleteAttribute: "حذف المتغير؟",
+  deleteDescription:
+    'سيتم حذف "{{name}}" من النظام. لا يمكن التراجع عن هذا الإجراء.',
+
+  cancel: "إلغاء",
+  confirmDelete: "حذف",
+
+  noAttributesFound: "لا توجد متغيرات",
+  noAttributesDescription:
+    "حاول تعديل البحث أو عوامل التصفية.",
+
+  showingAttributes:
+    "عرض {{from}}–{{to}} من أصل {{total}} متغير",
+
+  previous: "السابق",
+  next: "التالي",
+
+  createAttribute: "إنشاء متغير",
+  editAttribute: "تعديل المتغير",
+
+  attributeKey: "مفتاح المتغير",
+  attributeKeyPlaceholder: "مثال: customer_name",
+
+  attributeName: "اسم المتغير",
+  attributeNamePlaceholder: "مثال: اسم العميل",
+
+  attributeType: "نوع المتغير",
+
+  save: "حفظ",
+  saveChanges: "حفظ التغييرات",
+
+  createSuccess: "تم إنشاء المتغير بنجاح",
+  updateSuccess: "تم تحديث المتغير بنجاح",
+
+  createError: "تعذر إنشاء المتغير",
+  updateError: "تعذر تحديث المتغير",
+  deleteError: "تعذر حذف المتغير",
+
+  systemAttribute: "متغير نظام",
+  systemAttributeDescription:
+    "لا يمكن حذف أو تعديل متغيرات النظام.",
+
+  variable: "المتغير",
+  variableExample: "مثال: {{username}}",
+},
 settings: {
   title: "الإعدادات",
   description: "قم بإعداد اتصال واتساب الخاص بك.",

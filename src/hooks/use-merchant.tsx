@@ -31,6 +31,7 @@ export interface AbandonedCart {
   expiredDate: string | null;
   nextSendAt: string | null;
   lastSentAt: string | null;
+  ruleId:string | number
   schedulerStatus:
     | "pending"
     | "stopped"

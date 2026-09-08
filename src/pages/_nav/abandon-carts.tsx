@@ -42,6 +42,10 @@ import { useAuth } from '@/hooks/use-auth';
 
 const PAGE_SIZE = 20;
 
+type AbandonedCartWithRule = AbandonedCart & {
+  ruleId?: number | null;
+};
+
 const fillTemplate = (
   template: string,
   vars: Record<string, string | number>
@@ -333,7 +337,7 @@ export default function AbandonCartsPage() {
    */
 
   const selectedCart:
-    | AbandonedCart
+    | AbandonedCartWithRule
     | undefined = useMemo(
     () =>
       carts?.find(
@@ -526,6 +530,7 @@ export default function AbandonCartsPage() {
           Currency: cart.currency,
           Status: cart.status,
           SendCount: cart.sendCount,
+          RuleId: cart.ruleId ?? '',
           CreatedAt: cart.createdAt,
         })),
 
@@ -921,6 +926,10 @@ const getStatusBadge = (
                   }
                 </th>
 
+                <th className="px-6 py-3 font-medium">
+                  Rule ID
+                </th>
+
                 <th className="px-6 py-3 font-medium text-right">
                   {
                     t.abandonedCarts
@@ -937,7 +946,7 @@ const getStatusBadge = (
               {isLoading ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-6 py-10 text-center text-muted-foreground"
                   >
                     <div className="flex items-center justify-center">
@@ -953,7 +962,7 @@ const getStatusBadge = (
               ) : carts.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-6 py-14 text-center"
                   >
                     <ShoppingCart className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
@@ -1052,6 +1061,19 @@ const getStatusBadge = (
                         }
                       </div>
                     </td>
+
+                    <td className="px-6 py-3">
+                      {cart.ruleId != null ? (
+                        <Badge variant="outline" className="font-mono">
+                          {cart.ruleId}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          —
+                        </span>
+                      )}
+                    </td>
+
 <td className="px-6 py-3 text-right text-muted-foreground text-xs whitespace-nowrap">
   {formatSaudiDate(cart.createdAt)}
 </td>
@@ -1223,6 +1245,15 @@ const getStatusBadge = (
                   </div>
                 </div>
 
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
+                <span className="text-muted-foreground">
+                  Rule ID
+                </span>
+                <span className="font-mono font-semibold">
+                  {selectedCart.ruleId ?? '—'}
+                </span>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
