@@ -20,9 +20,9 @@ export interface AbandonedCart {
     | "active"
     | "notified"
     | "order_created"
-    | "expired" | "reminder_sent"
-    
-    |"purchased";
+    | "expired"
+    | "reminder_sent"
+    | "purchased";
   sendCount: number;
   total: number;
   currency: string;
@@ -31,7 +31,7 @@ export interface AbandonedCart {
   expiredDate: string | null;
   nextSendAt: string | null;
   lastSentAt: string | null;
-  ruleId:string | number
+  ruleId: string | number;
   schedulerStatus:
     | "pending"
     | "stopped"
@@ -109,6 +109,7 @@ export interface SendReminderRequest {
   merchantId: number;
   cartIds: string[];
   couponCode?: string;
+  ruleId?: number;
 }
 
 export interface ExportAllCartsRequest {
@@ -232,6 +233,7 @@ export function MerchantProvider({
       merchantId,
       cartIds,
       couponCode = "",
+      ruleId,
     }: SendReminderRequest) => {
       try {
         const response = await fetch(
@@ -245,6 +247,7 @@ export function MerchantProvider({
               merchantId,
               cartIds,
               couponCode,
+              ruleId,
             }),
           }
         );
@@ -785,7 +788,7 @@ export function MerchantProvider({
         loadCarts,
 
         /*
-         * THIS WAS MISSING BEFORE
+         * Fetches ALL carts across all pages.
          */
         exportAllCarts,
 

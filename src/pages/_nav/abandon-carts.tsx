@@ -43,7 +43,7 @@ import { useAuth } from '@/hooks/use-auth';
 const PAGE_SIZE = 20;
 
 type AbandonedCartWithRule = AbandonedCart & {
-  ruleId?: number | null;
+  ruleId?: number | string | null;
 };
 
 const fillTemplate = (
@@ -74,19 +74,13 @@ export default function AbandonCartsPage() {
    * ---------------------------------------------------------
    * FILTER STATE
    * ---------------------------------------------------------
-   *
-   * inputStartDate/inputEndDate:
-   * What the user is currently selecting.
-   *
-   * appliedStartDate/appliedEndDate:
-   * The filters actually used for the current table.
-   *
-   * This prevents pagination/re-renders from accidentally
-   * using stale filter values.
    */
 
-  const [inputStartDate, setInputStartDate] = useState('');
-  const [inputEndDate, setInputEndDate] = useState('');
+  const [inputStartDate, setInputStartDate] =
+    useState('');
+
+  const [inputEndDate, setInputEndDate] =
+    useState('');
 
   const [appliedStartDate, setAppliedStartDate] =
     useState<string | undefined>(undefined);
@@ -117,7 +111,8 @@ export default function AbandonCartsPage() {
   const [sendTarget, setSendTarget] =
     useState<string[] | null>(null);
 
-  const [couponCode, setCouponCode] = useState('');
+  const [couponCode, setCouponCode] =
+    useState('');
 
   const [isSending, setIsSending] =
     useState(false);
@@ -148,16 +143,7 @@ export default function AbandonCartsPage() {
       merchantId: user.merchantId,
 
       /*
-       * IMPORTANT:
-       *
-       * Keep these as strings.
-       *
-       * DO NOT do:
-       *
-       * new Date(startDate)
-       *
-       * because "2026-08-01" can become a UTC/local timezone
-       * conversion depending on the implementation.
+       * Keep dates as strings.
        */
       startDate: startDate || undefined,
       endDate: endDate || undefined,
@@ -177,6 +163,7 @@ export default function AbandonCartsPage() {
     if (!user) return;
 
     fetchCarts(1);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -184,8 +171,6 @@ export default function AbandonCartsPage() {
    * ---------------------------------------------------------
    * PAGINATION
    * ---------------------------------------------------------
-   *
-   * Whenever page changes, use the APPLIED filters.
    */
 
   useEffect(() => {
@@ -194,6 +179,7 @@ export default function AbandonCartsPage() {
     if (page === 1) return;
 
     fetchCarts(page);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
@@ -206,9 +192,6 @@ export default function AbandonCartsPage() {
   const handleLoad = () => {
     if (!user) return;
 
-    /*
-     * Validate range.
-     */
     if (
       inputStartDate &&
       inputEndDate &&
@@ -230,26 +213,12 @@ export default function AbandonCartsPage() {
     const nextEndDate =
       inputEndDate || undefined;
 
-    /*
-     * Store exactly what the user selected.
-     */
     setAppliedStartDate(nextStartDate);
     setAppliedEndDate(nextEndDate);
 
-    /*
-     * Reset pagination.
-     */
     setPage(1);
     setSelectedCartIds([]);
 
-    /*
-     * IMPORTANT:
-     *
-     * Do not call fetchCarts(1) here because
-     * React state updates are asynchronous.
-     *
-     * Pass the newly selected values directly.
-     */
     loadCarts({
       merchantId: user.merchantId,
       startDate: nextStartDate,
@@ -373,6 +342,46 @@ export default function AbandonCartsPage() {
 
   /*
    * ---------------------------------------------------------
+   * TARGET RULE ID
+   * ---------------------------------------------------------
+   *
+   * The ruleId comes directly from the cart returned
+   * by the backend.
+   *
+   * All selected carts must belong to the same rule.
+   */
+
+  const targetRuleId = useMemo(() => {
+    if (targetCarts.length === 0) {
+      return null;
+    }
+
+    const ruleIds = targetCarts
+      .map((cart) => cart.ruleId)
+      .filter(
+        (ruleId) =>
+          ruleId !== null &&
+          ruleId !== undefined &&
+          String(ruleId).trim() !== ''
+      )
+      .map((ruleId) => String(ruleId));
+
+    if (ruleIds.length === 0) {
+      return null;
+    }
+
+    const uniqueRuleIds =
+      Array.from(new Set(ruleIds));
+
+    if (uniqueRuleIds.length !== 1) {
+      return null;
+    }
+
+    return Number(uniqueRuleIds[0]);
+  }, [targetCarts]);
+
+  /*
+   * ---------------------------------------------------------
    * CURRENCY
    * ---------------------------------------------------------
    */
@@ -407,6 +416,53 @@ export default function AbandonCartsPage() {
       return;
     }
 
+    const selectedTargets =
+      (carts ?? []).filter((cart) =>
+        cartIds.includes(cart.cartId)
+      );
+
+    const ruleIds = selectedTargets
+      .map((cart) => cart.ruleId)
+      .filter(
+        (ruleId) =>
+          ruleId !== null &&
+          ruleId !== undefined &&
+          String(ruleId).trim() !== ''
+      )
+      .map((ruleId) => String(ruleId));
+
+    const uniqueRuleIds =
+      Array.from(new Set(ruleIds));
+
+    /*
+     * Do not allow carts from different rules
+     * to be sent in the same request.
+     */
+    if (uniqueRuleIds.length > 1) {
+      toast({
+        variant: 'destructive',
+        title: 'Different rules selected',
+        description:
+          'Please select carts belonging to the same rule before sending reminders.',
+      });
+
+      return;
+    }
+
+    /*
+     * Rule ID is required for the ChatGate request.
+     */
+    if (uniqueRuleIds.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Rule ID missing',
+        description:
+          'The selected cart does not have a rule ID.',
+      });
+
+      return;
+    }
+
     setCouponCode('');
     setSendTarget(cartIds);
   };
@@ -420,13 +476,83 @@ export default function AbandonCartsPage() {
   const handleConfirmSend = async () => {
     if (!sendTarget || !user) return;
 
+    /*
+     * Find the actual carts from the current page.
+     */
+    const selectedTargets =
+      (carts ?? []).filter((cart) =>
+        sendTarget.includes(cart.cartId)
+      );
+
+    /*
+     * Extract rule IDs.
+     */
+    const ruleIds = selectedTargets
+      .map((cart) => cart.ruleId)
+      .filter(
+        (ruleId) =>
+          ruleId !== null &&
+          ruleId !== undefined &&
+          String(ruleId).trim() !== ''
+      )
+      .map((ruleId) => String(ruleId));
+
+    const uniqueRuleIds =
+      Array.from(new Set(ruleIds));
+
+    /*
+     * Every cart in this request must belong
+     * to exactly one rule.
+     */
+    if (uniqueRuleIds.length !== 1) {
+      toast({
+        variant: 'destructive',
+        title:
+          uniqueRuleIds.length === 0
+            ? 'Rule ID missing'
+            : 'Different rules selected',
+        description:
+          uniqueRuleIds.length === 0
+            ? 'The selected carts do not have a valid rule ID.'
+            : 'Please select carts belonging to the same rule before sending reminders.',
+      });
+
+      return;
+    }
+
+    const ruleId = Number(
+      uniqueRuleIds[0]
+    );
+
+    if (!Number.isFinite(ruleId)) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Rule ID',
+        description:
+          'The selected cart has an invalid rule ID.',
+      });
+
+      return;
+    }
+
     setIsSending(true);
 
     try {
+      console.log(
+        'Sending abandoned cart reminder:',
+        {
+          merchantId: user.merchantId,
+          cartIds: sendTarget,
+          couponCode: couponCode.trim(),
+          ruleId,
+        }
+      );
+
       const success = await sendReminder({
         merchantId: user.merchantId,
         cartIds: sendTarget,
         couponCode: couponCode.trim(),
+        ruleId,
       });
 
       if (success) {
@@ -439,7 +565,8 @@ export default function AbandonCartsPage() {
             t.abandonedCarts
               .remindersSentDescription,
             {
-              count: sendTarget.length,
+              count:
+                sendTarget.length,
             }
           ),
         });
@@ -455,8 +582,7 @@ export default function AbandonCartsPage() {
         setSelectedCartId(null);
 
         /*
-         * Refresh the current page using
-         * the currently applied filters.
+         * Refresh current page.
          */
         fetchCarts(page);
       } else {
@@ -471,6 +597,24 @@ export default function AbandonCartsPage() {
               .failedToSendDescription,
         });
       }
+    } catch (error) {
+      console.error(
+        'Failed to send reminder:',
+        error
+      );
+
+      toast({
+        variant: 'destructive',
+        title:
+          t.abandonedCarts
+            .failedToSendTitle,
+
+        description:
+          error instanceof Error
+            ? error.message
+            : t.abandonedCarts
+                .failedToSendDescription,
+      });
     } finally {
       setIsSending(false);
     }
@@ -480,11 +624,6 @@ export default function AbandonCartsPage() {
    * ---------------------------------------------------------
    * EXPORT
    * ---------------------------------------------------------
-   *
-   * `carts` is ONLY the current page.
-   *
-   * Therefore we use exportAllCarts() and pass the
-   * currently applied filters.
    */
 
   const handleExport = async () => {
@@ -495,19 +634,16 @@ export default function AbandonCartsPage() {
     try {
       const allCarts =
         await exportAllCarts({
-          merchantId: user.merchantId,
+          merchantId:
+            user.merchantId,
 
-          /*
-           * IMPORTANT:
-           *
-           * Export the same filters currently
-           * applied to the table.
-           */
           startDate:
-            appliedStartDate || undefined,
+            appliedStartDate ||
+            undefined,
 
           endDate:
-            appliedEndDate || undefined,
+            appliedEndDate ||
+            undefined,
         });
 
       if (!allCarts?.length) {
@@ -520,6 +656,7 @@ export default function AbandonCartsPage() {
 
         return;
       }
+
       exportToExcel(
         allCarts.map((cart) => ({
           CartId: cart.cartId,
@@ -533,7 +670,6 @@ export default function AbandonCartsPage() {
           RuleId: cart.ruleId ?? '',
           CreatedAt: cart.createdAt,
         })),
-
 
         `chatgate-abandoned-carts-${format(
           new Date(),
@@ -575,69 +711,93 @@ export default function AbandonCartsPage() {
    * ---------------------------------------------------------
    */
 
-  const formatSaudiDate = (date: string | Date) => {
-  const parsedDate = new Date(date);
+  const formatSaudiDate = (
+    date: string | Date
+  ) => {
+    const parsedDate =
+      new Date(date);
 
-  return format(
-    new Date(parsedDate.getTime() - 3 * 60 * 60 * 1000),
-    'MMM d, yyyy h:mm a'
-  );
-};
+    return format(
+      new Date(
+        parsedDate.getTime() -
+          3 * 60 * 60 * 1000
+      ),
+      'MMM d, yyyy h:mm a'
+    );
+  };
 
-const getStatusBadge = (
-  status: AbandonedCart['status']
-) => {
-  switch (status) {
+  const getStatusBadge = (
+    status: AbandonedCart['status']
+  ) => {
+    switch (status) {
+      case 'reminder_sent':
+        return (
+          <Badge variant="secondary">
+            {
+              t.abandonedCarts
+                .reminder_sent
+            }
+          </Badge>
+        );
 
-    case "reminder_sent":
-           return (
-        <Badge variant="secondary">
-          {t.abandonedCarts.reminder_sent}
-        </Badge>
-      );
-    case 'active':
-      return (
-        <Badge variant="secondary">
-          {t.abandonedCarts.statusActive}
-        </Badge>
-      );
+      case 'active':
+        return (
+          <Badge variant="secondary">
+            {
+              t.abandonedCarts
+                .statusActive
+            }
+          </Badge>
+        );
 
-    case 'notified':
-      return (
-        <Badge className="bg-blue-500/15 text-blue-600 hover:bg-blue-500/15 border-transparent">
-          {t.abandonedCarts.statusNotified}
-        </Badge>
-      );
+      case 'notified':
+        return (
+          <Badge className="bg-blue-500/15 text-blue-600 hover:bg-blue-500/15 border-transparent">
+            {
+              t.abandonedCarts
+                .statusNotified
+            }
+          </Badge>
+        );
 
-    case 'purchased':
-      return (
-        <Badge className="bg-green-500/15 text-green-600 hover:bg-green-500/15 border-transparent">
-          {t.abandonedCarts.statusPurchased}
-        </Badge>
-      );
+      case 'purchased':
+        return (
+          <Badge className="bg-green-500/15 text-green-600 hover:bg-green-500/15 border-transparent">
+            {
+              t.abandonedCarts
+                .statusPurchased
+            }
+          </Badge>
+        );
 
-    case 'order_created':
-      return (
-        <Badge className="bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15 border-transparent">
-          {t.abandonedCarts.statusRecovered}
-        </Badge>
-      );
+      case 'order_created':
+        return (
+          <Badge className="bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15 border-transparent">
+            {
+              t.abandonedCarts
+                .statusRecovered
+            }
+          </Badge>
+        );
 
-    case 'expired':
-      return (
-        <Badge variant="destructive">
-          {t.abandonedCarts.statusExpired}
-        </Badge>
-      );
+      case 'expired':
+        return (
+          <Badge variant="destructive">
+            {
+              t.abandonedCarts
+                .statusExpired
+            }
+          </Badge>
+        );
 
-    default:
-      return (
-        <Badge variant="outline">
-          {status}
-        </Badge>
-      );
-  }
-};
+      default:
+        return (
+          <Badge variant="outline">
+            {status}
+          </Badge>
+        );
+    }
+  };
 
   /*
    * ---------------------------------------------------------
@@ -645,7 +805,9 @@ const getStatusBadge = (
    * ---------------------------------------------------------
    */
 
-  const initials = (name: string) =>
+  const initials = (
+    name: string
+  ) =>
     (name || '?')
       .split(' ')
       .filter(Boolean)
@@ -726,7 +888,9 @@ const getStatusBadge = (
 
                   <Input
                     type="date"
-                    value={inputStartDate}
+                    value={
+                      inputStartDate
+                    }
                     onChange={(event) =>
                       setInputStartDate(
                         event.target.value
@@ -749,7 +913,9 @@ const getStatusBadge = (
 
                   <Input
                     type="date"
-                    value={inputEndDate}
+                    value={
+                      inputEndDate
+                    }
                     onChange={(event) =>
                       setInputEndDate(
                         event.target.value
@@ -819,7 +985,6 @@ const getStatusBadge = (
       {/* =====================================================
           SELECTION TOOLBAR
       ====================================================== */}
-{console.log({cart:carts.find(i=>i.cartId=='3022299690800167444')})}
 
       {selectedCartIds.length > 0 && (
         <div className="flex items-center justify-between gap-4 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 animate-in fade-in slide-in-from-top-1 duration-200">
@@ -828,11 +993,14 @@ const getStatusBadge = (
             <MessageCircle className="h-4 w-4 text-primary" />
 
             {selectedCartIds.length}{' '}
-            {t.abandonedCarts
-              .cartsSelectedSuffix}
+            {
+              t.abandonedCarts
+                .cartsSelectedSuffix
+            }
           </div>
 
           <div className="flex items-center gap-2">
+
             <Button
               variant="ghost"
               size="sm"
@@ -871,6 +1039,7 @@ const getStatusBadge = (
       <div className="border border-border rounded-lg bg-card overflow-hidden">
 
         <div className="overflow-x-auto">
+
           <table className="w-full text-sm text-left">
 
             <thead className="text-xs text-muted-foreground bg-muted/50 uppercase border-b border-border">
@@ -938,12 +1107,14 @@ const getStatusBadge = (
                 </th>
 
                 <th className="px-6 py-3 font-medium text-right" />
+
               </tr>
             </thead>
 
             <tbody className="divide-y divide-border">
 
               {isLoading ? (
+
                 <tr>
                   <td
                     colSpan={9}
@@ -959,7 +1130,9 @@ const getStatusBadge = (
                     </div>
                   </td>
                 </tr>
+
               ) : carts.length === 0 ? (
+
                 <tr>
                   <td
                     colSpan={9}
@@ -982,8 +1155,11 @@ const getStatusBadge = (
                     </p>
                   </td>
                 </tr>
+
               ) : (
+
                 carts.map((cart) => (
+
                   <tr
                     key={cart.cartId}
                     className={`group transition-colors ${
@@ -1009,6 +1185,7 @@ const getStatusBadge = (
                         }
                       />
                     </td>
+
                     <td
                       className="px-6 py-3 font-mono font-medium text-primary cursor-pointer"
                       onClick={() =>
@@ -1034,6 +1211,7 @@ const getStatusBadge = (
                             cart.customerName
                           }
                         </span>
+
                       </div>
                     </td>
 
@@ -1064,7 +1242,10 @@ const getStatusBadge = (
 
                     <td className="px-6 py-3">
                       {cart.ruleId != null ? (
-                        <Badge variant="outline" className="font-mono">
+                        <Badge
+                          variant="outline"
+                          className="font-mono"
+                        >
                           {cart.ruleId}
                         </Badge>
                       ) : (
@@ -1074,9 +1255,11 @@ const getStatusBadge = (
                       )}
                     </td>
 
-<td className="px-6 py-3 text-right text-muted-foreground text-xs whitespace-nowrap">
-  {formatSaudiDate(cart.createdAt)}
-</td>
+                    <td className="px-6 py-3 text-right text-muted-foreground text-xs whitespace-nowrap">
+                      {formatSaudiDate(
+                        cart.createdAt
+                      )}
+                    </td>
 
                     <td className="px-6 py-3 text-right">
                       <Button
@@ -1099,7 +1282,9 @@ const getStatusBadge = (
                     </td>
 
                   </tr>
+
                 ))
+
               )}
 
             </tbody>
@@ -1113,12 +1298,14 @@ const getStatusBadge = (
         <div className="flex items-center justify-between border-t border-border px-6 py-3">
 
           <span className="text-xs text-muted-foreground">
+
             {t.abandonedCarts.page}{' '}
             {page}
 
             {cartsPage?.totalPages
               ? ` / ${cartsPage.totalPages}`
               : ''}
+
           </span>
 
           <div className="flex items-center gap-2">
@@ -1186,10 +1373,13 @@ const getStatusBadge = (
           setSelectedCartId(null)
         }
       >
+
         <DialogContent className="sm:max-w-[500px]">
 
           <DialogHeader>
+
             <DialogTitle className="flex items-center gap-2">
+
               <span>
                 {
                   t.abandonedCarts
@@ -1204,15 +1394,19 @@ const getStatusBadge = (
                 getStatusBadge(
                   selectedCart.status
                 )}
+
             </DialogTitle>
+
           </DialogHeader>
 
           {selectedCart ? (
+
             <div className="space-y-6 mt-2">
 
               <div className="flex justify-between items-start p-4 bg-muted/30 rounded-lg border border-border">
 
                 <div>
+
                   <p className="text-sm text-muted-foreground">
                     {
                       t.abandonedCarts
@@ -1226,9 +1420,11 @@ const getStatusBadge = (
                       selectedCart.currency
                     )}
                   </p>
+
                 </div>
 
                 <div className="text-right">
+
                   <p className="text-sm text-muted-foreground">
                     {
                       t.abandonedCarts
@@ -1237,28 +1433,35 @@ const getStatusBadge = (
                   </p>
 
                   <div className="mt-1 flex justify-end items-center gap-1.5 font-medium">
+
                     <Send className="h-3.5 w-3.5 text-muted-foreground" />
 
                     {
                       selectedCart.sendCount
                     }
+
                   </div>
                 </div>
 
               </div>
 
               <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
+
                 <span className="text-muted-foreground">
                   Rule ID
                 </span>
+
                 <span className="font-mono font-semibold">
-                  {selectedCart.ruleId ?? '—'}
+                  {selectedCart.ruleId ??
+                    '—'}
                 </span>
+
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
 
                 <div>
+
                   <p className="text-muted-foreground mb-1">
                     {
                       t.abandonedCarts
@@ -1290,9 +1493,11 @@ const getStatusBadge = (
                       }
                     </div>
                   )}
+
                 </div>
 
                 <div>
+
                   <p className="text-muted-foreground mb-1">
                     {
                       t.abandonedCarts
@@ -1301,6 +1506,7 @@ const getStatusBadge = (
                   </p>
 
                   <p className="font-medium flex items-center gap-1.5">
+
                     <Clock className="h-3.5 w-3.5 text-muted-foreground" />
 
                     {format(
@@ -1309,7 +1515,9 @@ const getStatusBadge = (
                       ),
                       'PPp'
                     )}
+
                   </p>
+
                 </div>
 
               </div>
@@ -1337,6 +1545,7 @@ const getStatusBadge = (
                   className="gap-2"
                   asChild
                 >
+
                   <a
                     href={
                       selectedCart.checkoutUrl
@@ -1351,17 +1560,22 @@ const getStatusBadge = (
                         .viewCheckout
                     }
                   </a>
+
                 </Button>
 
               </div>
+
             </div>
+
           ) : (
+
             <div className="py-8 text-center text-muted-foreground">
               {
                 t.abandonedCarts
                   .failedToLoad
               }
             </div>
+
           )}
 
         </DialogContent>
@@ -1381,20 +1595,24 @@ const getStatusBadge = (
           setSendTarget(null)
         }
       >
+
         <DialogContent className="sm:max-w-[440px]">
 
           <DialogHeader>
 
             <DialogTitle className="flex items-center gap-2">
+
               <Send className="h-4 w-4 text-primary" />
 
               {
                 t.abandonedCarts
                   .sendWhatsappReminderTitle
               }
+
             </DialogTitle>
 
             <DialogDescription>
+
               {sendTarget &&
               sendTarget.length > 1
                 ? fillTemplate(
@@ -1407,6 +1625,7 @@ const getStatusBadge = (
                   )
                 : t.abandonedCarts
                     .sendReminderDescriptionSingle}
+
             </DialogDescription>
 
           </DialogHeader>
@@ -1414,19 +1633,32 @@ const getStatusBadge = (
           <div className="space-y-4">
 
             {targetCarts.length > 0 && (
+
               <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2 max-h-40 overflow-y-auto">
 
                 {targetCarts.map(
                   (cart) => (
+
                     <div
                       key={cart.cartId}
                       className="flex items-center justify-between text-sm"
                     >
-                      <span className="text-foreground font-medium">
-                        {
-                          cart.customerName
-                        }
-                      </span>
+
+                      <div className="flex flex-col">
+
+                        <span className="text-foreground font-medium">
+                          {
+                            cart.customerName
+                          }
+                        </span>
+
+                        <span className="text-xs text-muted-foreground">
+                          Rule ID:{' '}
+                          {cart.ruleId ??
+                            '—'}
+                        </span>
+
+                      </div>
 
                       <span className="font-mono text-muted-foreground">
                         {formatCurrency(
@@ -1434,12 +1666,14 @@ const getStatusBadge = (
                           cart.currency
                         )}
                       </span>
+
                     </div>
+
                   )
                 )}
 
-                {targetCarts.length >
-                  1 && (
+                {targetCarts.length > 1 && (
+
                   <div className="flex items-center justify-between text-sm pt-2 border-t border-border/60">
 
                     <span className="text-muted-foreground">
@@ -1458,10 +1692,27 @@ const getStatusBadge = (
                     </span>
 
                   </div>
+
                 )}
 
               </div>
+
             )}
+
+            {/* RULE ID */}
+
+            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
+
+              <span className="text-muted-foreground">
+                Rule ID
+              </span>
+
+              <span className="font-mono font-semibold">
+                {targetRuleId ??
+                  '—'}
+              </span>
+
+            </div>
 
             <div className="space-y-1.5">
 
@@ -1527,9 +1778,14 @@ const getStatusBadge = (
               onClick={
                 handleConfirmSend
               }
-              disabled={isSending}
+              disabled={
+                isSending ||
+                targetRuleId === null
+              }
             >
+
               {isSending ? (
+
                 <>
                   <RotateCcw className="h-4 w-4 mr-2 animate-spin" />
 
@@ -1538,7 +1794,9 @@ const getStatusBadge = (
                       .sending
                   }
                 </>
+
               ) : (
+
                 <>
                   <Send className="h-4 w-4 mr-2" />
 
@@ -1552,7 +1810,9 @@ const getStatusBadge = (
                     ? `(${sendTarget.length})`
                     : ''}
                 </>
+
               )}
+
             </Button>
 
           </DialogFooter>
