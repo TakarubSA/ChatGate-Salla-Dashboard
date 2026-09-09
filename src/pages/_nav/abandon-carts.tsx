@@ -144,7 +144,7 @@ export default function AbandonCartsPage() {
    * ---------------------------------------------------------
    */
 
-  const fetchCarts = (
+  const fetchCarts = async (
     targetPage: number,
     startDate = appliedStartDate,
     endDate = appliedEndDate
@@ -206,51 +206,46 @@ export default function AbandonCartsPage() {
    * ---------------------------------------------------------
    */
 
-  const handleLoad = () => {
+  const applyFilters = (
+    nextStartDate: string,
+    nextEndDate: string,
+    nextStatus: CartStatus | ''
+  ) => {
     if (!user) return;
 
     if (
-      inputStartDate &&
-      inputEndDate &&
-      inputStartDate > inputEndDate
+      nextStartDate &&
+      nextEndDate &&
+      nextStartDate > nextEndDate
     ) {
       toast({
         variant: 'destructive',
         title: 'Invalid date range',
-        description:
-          'Start date cannot be after end date.',
+        description: 'Start date cannot be after end date.',
       });
-
       return;
     }
 
-    const nextStartDate =
-      inputStartDate || undefined;
+    const startDate = nextStartDate || undefined;
+    const endDate = nextEndDate || undefined;
 
-    const nextEndDate =
-      inputEndDate || undefined;
-
-    setAppliedStartDate(nextStartDate);
-    setAppliedEndDate(nextEndDate);
-
+    setAppliedStartDate(startDate);
+    setAppliedEndDate(endDate);
     setPage(1);
     setSelectedCartIds([]);
 
     loadCarts({
       merchantId: user.merchantId,
-      startDate: nextStartDate,
-      endDate: nextEndDate,
-
-      /*
-       * Status is either:
-       * active
-       * purchased
-       */
-      status: status || undefined,
-
+      startDate,
+      endDate,
+      status: nextStatus || undefined,
       page: 1,
       size: PAGE_SIZE,
     });
+  };
+
+  const handleLoad = () => {
+    applyFilters(inputStartDate, inputEndDate, status);
   };
 
   /*
@@ -569,7 +564,8 @@ export default function AbandonCartsPage() {
         setSendTarget(null);
         setSelectedCartId(null);
 
-        fetchCarts(page);
+        // State is already updated by sendReminder().
+        // Do not reload the API here, or a stale response can overwrite the update.
       } else {
         toast({
           variant: 'destructive',
@@ -830,9 +826,11 @@ export default function AbandonCartsPage() {
               <Input
                 type="date"
                 value={inputStartDate}
-                onChange={(event) =>
-                  setInputStartDate(event.target.value)
-                }
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setInputStartDate(value);
+                  applyFilters(value, inputEndDate, status);
+                }}
                 className="w-full rounded-lg bg-background/70 text-right"
                 dir="ltr"
               />
@@ -846,9 +844,11 @@ export default function AbandonCartsPage() {
               <Input
                 type="date"
                 value={inputEndDate}
-                onChange={(event) =>
-                  setInputEndDate(event.target.value)
-                }
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setInputEndDate(value);
+                  applyFilters(inputStartDate, value, status);
+                }}
                 className="w-full rounded-lg bg-background/70 text-right"
                 dir="ltr"
               />
@@ -861,13 +861,19 @@ export default function AbandonCartsPage() {
               </Label>
               <Select
                 value={status || 'all'}
-                onValueChange={(value) =>
-                  setStatus(
+                onValueChange={(value) => {
+                  const nextStatus =
                     value === 'all'
                       ? ''
-                      : (value as CartStatus)
-                  )
-                }
+                      : (value as CartStatus);
+
+                  setStatus(nextStatus);
+                  applyFilters(
+                    inputStartDate,
+                    inputEndDate,
+                    nextStatus
+                  );
+                }}
               >
                 <SelectTrigger className="w-full rounded-lg bg-background/70 ltr:text-left rtl:text-right">
                   <SelectValue placeholder={t.abandonedCarts.viewAll} />
@@ -897,17 +903,6 @@ export default function AbandonCartsPage() {
                   {t.common.reset ?? 'Reset'}
                 </Button>
               )}
-
-              <Button
-                className="h-9 px-3 rounded-lg shadow-sm sm:flex-none"
-                onClick={handleLoad}
-                disabled={isLoading}
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                {isLoading
-                  ? t.abandonedCarts.loadingCarts
-                  : t.abandonedCarts.loadCarts}
-              </Button>
             </div>
           </div>
 

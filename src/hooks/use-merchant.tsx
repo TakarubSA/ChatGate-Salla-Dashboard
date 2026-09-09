@@ -298,6 +298,42 @@ export function MerchantProvider({
           );
         }
 
+        // Update both the table data and pagination data immediately.
+        // Do not reload carts here because the backend may still be processing
+        // the reminder and return stale data.
+        const now = new Date().toISOString();
+
+        setCarts((currentCarts) =>
+          currentCarts.map((cart) =>
+            cartIds.includes(cart.cartId)
+              ? {
+                  ...cart,
+                  sendCount: (cart.sendCount ?? 0) + 1,
+                  lastSentAt: now,
+                  updatedAt: now,
+                }
+              : cart
+          )
+        );
+
+        setCartsPage((currentPage) =>
+          currentPage
+            ? {
+                ...currentPage,
+                content: currentPage.content.map((cart) =>
+                  cartIds.includes(cart.cartId)
+                    ? {
+                        ...cart,
+                        sendCount: (cart.sendCount ?? 0) + 1,
+                        lastSentAt: now,
+                        updatedAt: now,
+                      }
+                    : cart
+                ),
+              }
+            : currentPage
+        );
+
         return true;
       } catch (error) {
         console.error(

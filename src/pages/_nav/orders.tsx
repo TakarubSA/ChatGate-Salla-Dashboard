@@ -91,16 +91,12 @@ export default function OrdersPage() {
     });
   };
 
-  const handleLoad = () => {
-    setPage(1);
-    fetchPage(1);
-  };
-
   useEffect(() => {
     if (!user?.merchantId) return;
+    setPage(1);
     fetchPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, startDate, endDate]);
 
   const goToPage = (targetPage: number) => {
     if (targetPage < 1 || (ordersPage && targetPage > ordersPage.totalPages)) return;
@@ -232,17 +228,6 @@ export default function OrdersPage() {
                   onClick={() => {
                     setStartDate('');
                     setEndDate('');
-                    setPage(1);
-
-                    if (user?.merchantId) {
-                      loadOrders({
-                        merchantId: user.merchantId,
-                        startDate: '',
-                        endDate: '',
-                        page: 1,
-                        size: PAGE_SIZE,
-                      });
-                    }
                   }}
                   disabled={isLoadingOrders}
                 >
@@ -251,16 +236,12 @@ export default function OrdersPage() {
                 </Button>
               )}
 
-              <Button
-                className="h-9 px-3 rounded-lg shadow-sm sm:flex-none"
-                onClick={handleLoad}
-                disabled={isLoadingOrders}
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                {isLoadingOrders
-                  ? t.orders.loading
-                  : t.orders.loadOrdersButton}
-              </Button>
+              {isLoadingOrders && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <RotateCcw className="h-4 w-4 animate-spin" />
+                  {t.orders.loading}
+                </div>
+              )}
             </div>
           </div>
 
