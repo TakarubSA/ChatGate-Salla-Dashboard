@@ -698,7 +698,7 @@ export default function AbandonCartsPage() {
           Total: cart.total,
           Currency: cart.currency,
           Status: getCartStatus(cart),
-          SendCount: cart.sendCount,
+          // SendCount: cart.sendCount,
           RuleId: cart.ruleId ?? '',
           CreatedAt: cart.createdAt,
         })),
