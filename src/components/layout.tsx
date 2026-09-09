@@ -62,11 +62,11 @@ export function Layout({
         href: '/orders',
         icon: ShoppingCart,
       },
-      {
-        name: t.nav.templates,
-        href: '/templates',
-        icon: Telescope,
-      },
+      // {
+      //   name: t.nav.templates,
+      //   href: '/templates',
+      //   icon: Telescope,
+      // },
       {
         name: t.nav.reminderRules,
         href: '/reminder-rules',

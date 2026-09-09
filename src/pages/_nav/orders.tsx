@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,7 +19,6 @@ import {
   Package,
   ChevronLeft,
   ChevronRight,
-  MoreHorizontal,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { exportToExcel } from '@/lib/export-excel';
@@ -28,45 +27,6 @@ import { useAuth } from '@/hooks/use-auth';
 import { useLanguage } from '@/hooks/use-language';
 
 const PAGE_SIZE = 20;
-
-// Builds a page-number list with ellipses, e.g.
-// [1, '...', 4, 5, 6, '...', 42] instead of showing every page.
-function buildPageWindow(current: number, total: number): (number | 'ellipsis')[] {
-  const siblingCount = 1;
-  const totalNumbersShown = siblingCount * 2 + 5; // first, last, current, 2 siblings, 2 ellipses
-
-  if (total <= totalNumbersShown) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
-
-  const leftSibling = Math.max(current - siblingCount, 1);
-  const rightSibling = Math.min(current + siblingCount, total);
-
-  const showLeftEllipsis = leftSibling > 2;
-  const showRightEllipsis = rightSibling < total - 1;
-
-  const pages: (number | 'ellipsis')[] = [1];
-
-  if (showLeftEllipsis) {
-    pages.push('ellipsis');
-  } else {
-    for (let p = 2; p < leftSibling; p++) pages.push(p);
-  }
-
-  for (let p = leftSibling; p <= rightSibling; p++) {
-    if (p !== 1 && p !== total) pages.push(p);
-  }
-
-  if (showRightEllipsis) {
-    pages.push('ellipsis');
-  } else {
-    for (let p = rightSibling + 1; p < total; p++) pages.push(p);
-  }
-
-  pages.push(total);
-
-  return pages;
-}
 
 export default function OrdersPage() {
   const { toast } = useToast();
@@ -79,36 +39,51 @@ export default function OrdersPage() {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [page, setPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const requestIdRef = useRef(0);
 
-  const fetchPage = (targetPage: number) => {
+  const fetchPage = async (targetPage: number) => {
     if (!user?.merchantId) return;
-    loadOrders({
+
+    const requestId = ++requestIdRef.current;
+
+    const result = await loadOrders({
       merchantId: user.merchantId,
       startDate,
       endDate,
       page: targetPage,
       size: PAGE_SIZE,
     });
+
+    if (requestId !== requestIdRef.current) return;
+
+    if (!result) {
+      setHasNextPage(false);
+      return;
+    }
+
+    // Match abandoned-carts pagination:
+    // raw-array APIs expose only whether another page exists.
+    setHasNextPage(
+      result.hasNextPage ??
+        (result.content?.length === PAGE_SIZE)
+    );
   };
 
   useEffect(() => {
     if (!user?.merchantId) return;
     setPage(1);
-    fetchPage(1);
+    void fetchPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, startDate, endDate]);
 
   const goToPage = (targetPage: number) => {
-    if (targetPage < 1 || (ordersPage && targetPage > ordersPage.totalPages)) return;
-    if (targetPage === page) return;
-    setPage(targetPage);
-    fetchPage(targetPage);
-  };
+    if (targetPage < 1 || targetPage === page) return;
+    if (targetPage > page && !hasNextPage) return;
 
-  const pageWindow = useMemo(
-    () => (ordersPage ? buildPageWindow(page, ordersPage.totalPages) : []),
-    [page, ordersPage]
-  );
+    setPage(targetPage);
+    void fetchPage(targetPage);
+  };
 
   const selectedOrder: Order | undefined = useMemo(
     () => (orders ?? []).find((o: Order) => o.id === selectedOrderId),
@@ -341,55 +316,34 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        {ordersPage && ordersPage.totalElements > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
-            <div>
-              {t.orders.showingPage} {ordersPage.page} of {ordersPage.totalPages} ·{' '}
-              {ordersPage.totalElements} {t.orders.totalOrders}
-            </div>
-            <div className="flex items-center gap-1">
+        {orders && orders.length > 0 && (
+          <div className="flex items-center justify-between border-t border-border px-6 py-3">
+            <span className="text-xs text-muted-foreground">
+              {t.orders.showingPage} {page}
+              {ordersPage?.totalPagesKnown
+                ? ` / ${ordersPage.totalPages}`
+                : ''}
+            </span>
+
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => goToPage(page - 1)}
-                disabled={isLoadingOrders || page <= 1}
+                disabled={page <= 1}
               >
-                <ChevronLeft className="h-4 w-4 mr-1" />
+                <ChevronLeft className="h-4 w-4 mr-1 rtl:rotate-180" />
                 {t.orders.previous}
               </Button>
-
-              <div className="flex items-center gap-1 mx-1">
-                {pageWindow.map((entry, index) =>
-                  entry === 'ellipsis' ? (
-                    <span
-                      key={`ellipsis-${index}`}
-                      className="flex h-8 w-8 items-center justify-center text-muted-foreground/60"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </span>
-                  ) : (
-                    <Button
-                      key={entry}
-                      variant={entry === page ? 'default' : 'outline'}
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      disabled={isLoadingOrders}
-                      onClick={() => goToPage(entry)}
-                    >
-                      {entry}
-                    </Button>
-                  )
-                )}
-              </div>
 
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => goToPage(page + 1)}
-                disabled={isLoadingOrders || page >= ordersPage.totalPages}
+                disabled={isLoadingOrders || !hasNextPage}
               >
                 {t.orders.next}
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <ChevronRight className="h-4 w-4 ml-1 rtl:rotate-180" />
               </Button>
             </div>
           </div>

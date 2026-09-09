@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,6 +32,7 @@ import {
   Send,
   Tag,
   X,
+  Search,
   ChevronLeft,
   ChevronRight,
   MessageCircle,
@@ -101,6 +102,29 @@ export default function AbandonCartsPage() {
     useState<string | undefined>(undefined);
 
   const [page, setPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const requestIdRef = useRef(0);
+  const [search, setSearch] = useState('');
+
+
+  const filteredCarts = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return carts ?? [];
+
+    return (carts ?? []).filter((cart) =>
+      [
+        cart.cartId,
+        cart.customerName,
+        cart.customerEmail,
+        cart.customerMobile,
+        cart.ruleId,
+      ]
+        .filter((value) => value !== null && value !== undefined)
+        .some((value) =>
+          String(value).toLowerCase().includes(query)
+        )
+    );
+  }, [carts, search]);
 
   /*
    * ---------------------------------------------------------
@@ -144,30 +168,33 @@ export default function AbandonCartsPage() {
    * ---------------------------------------------------------
    */
 
-  const fetchCarts = async (
+  const fetchPage = async (
     targetPage: number,
     startDate = appliedStartDate,
-    endDate = appliedEndDate
+    endDate = appliedEndDate,
+    targetStatus = status,
+    targetSearch = search
   ) => {
     if (!user) return;
 
-    loadCarts({
+    const requestId = ++requestIdRef.current;
+
+    const result = await loadCarts({
       merchantId: user.merchantId,
-
       startDate: startDate || undefined,
-
       endDate: endDate || undefined,
-
-      /*
-       * Only:
-       * active
-       * purchased
-       */
-      status: status || undefined,
-
+      status: targetStatus || undefined,
+      search: targetSearch.trim() || undefined,
       page: targetPage,
       size: PAGE_SIZE,
     });
+
+    if (requestId !== requestIdRef.current) return;
+
+    setHasNextPage(
+      result?.hasNextPage ??
+        (result?.content?.length === PAGE_SIZE)
+    );
   };
 
   /*
@@ -179,10 +206,28 @@ export default function AbandonCartsPage() {
   useEffect(() => {
     if (!user) return;
 
-    fetchCarts(1);
+    setPage(1);
+    void fetchPage(1);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  // Reload from the API when the search term changes.
+  useEffect(() => {
+    if (!user) return;
+
+    const query = search.trim();
+    const timer = window.setTimeout(() => {
+      setPage(1);
+      setSelectedCartIds([]);
+      void fetchPage(1, appliedStartDate, appliedEndDate, status, query);
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+
+    // fetchPage intentionally omitted; it is derived from current filter state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   /*
    * ---------------------------------------------------------
@@ -190,15 +235,13 @@ export default function AbandonCartsPage() {
    * ---------------------------------------------------------
    */
 
-  useEffect(() => {
-    if (!user) return;
+  const goToPage = (targetPage: number) => {
+    if (targetPage < 1 || targetPage === page) return;
+    if (targetPage > page && !hasNextPage) return;
 
-    if (page === 1) return;
-
-    fetchCarts(page);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+    setPage(targetPage);
+    void fetchPage(targetPage);
+  };
 
   /*
    * ---------------------------------------------------------
@@ -206,7 +249,7 @@ export default function AbandonCartsPage() {
    * ---------------------------------------------------------
    */
 
-  const applyFilters = (
+  const applyFilters = async (
     nextStartDate: string,
     nextEndDate: string,
     nextStatus: CartStatus | ''
@@ -234,18 +277,11 @@ export default function AbandonCartsPage() {
     setPage(1);
     setSelectedCartIds([]);
 
-    loadCarts({
-      merchantId: user.merchantId,
-      startDate,
-      endDate,
-      status: nextStatus || undefined,
-      page: 1,
-      size: PAGE_SIZE,
-    });
+    await fetchPage(1, startDate, endDate, nextStatus);
   };
 
   const handleLoad = () => {
-    applyFilters(inputStartDate, inputEndDate, status);
+    void applyFilters(inputStartDate, inputEndDate, status);
   };
 
   /*
@@ -254,24 +290,19 @@ export default function AbandonCartsPage() {
    * ---------------------------------------------------------
    */
 
-  const handleResetFilters = () => {
+  const handleResetFilters = async () => {
     if (!user) return;
 
     setInputStartDate('');
     setInputEndDate('');
     setStatus('');
-
+    setSearch('');
     setAppliedStartDate(undefined);
     setAppliedEndDate(undefined);
-
     setSelectedCartIds([]);
     setPage(1);
 
-    loadCarts({
-      merchantId: user.merchantId,
-      page: 1,
-      size: PAGE_SIZE,
-    });
+    await fetchPage(1, undefined, undefined, '');
   };
 
   /*
@@ -289,8 +320,8 @@ export default function AbandonCartsPage() {
   };
 
   const allOnPageSelected =
-    carts.length > 0 &&
-    carts.every((cart) =>
+    filteredCarts.length > 0 &&
+    filteredCarts.every((cart) =>
       selectedCartIds.includes(cart.cartId)
     );
 
@@ -299,7 +330,7 @@ export default function AbandonCartsPage() {
   ) => {
     if (checked) {
       setSelectedCartIds((prev) => {
-        const ids = carts.map(
+        const ids = filteredCarts.map(
           (cart) => cart.cartId
         );
 
@@ -309,7 +340,7 @@ export default function AbandonCartsPage() {
       });
     } else {
       const currentPageIds = new Set(
-        carts.map((cart) => cart.cartId)
+        filteredCarts.map((cart) => cart.cartId)
       );
 
       setSelectedCartIds((prev) =>
@@ -336,6 +367,7 @@ export default function AbandonCartsPage() {
       ),
     [carts, selectedCartId]
   );
+
 
   /*
    * ---------------------------------------------------------
@@ -564,8 +596,17 @@ export default function AbandonCartsPage() {
         setSendTarget(null);
         setSelectedCartId(null);
 
-        // State is already updated by sendReminder().
-        // Do not reload the API here, or a stale response can overwrite the update.
+        // Optimistic state is updated by sendReminder(). Refresh from the API
+        // after the backend has had a moment to persist the new reminder data.
+        window.setTimeout(() => {
+          void fetchPage(
+            page,
+            appliedStartDate,
+            appliedEndDate,
+            status,
+            search
+          );
+        }, 500);
       } else {
         toast({
           variant: 'destructive',
@@ -762,9 +803,8 @@ export default function AbandonCartsPage() {
    * ---------------------------------------------------------
    */
 
-  const hasNextPage = cartsPage
-    ? page < cartsPage.totalPages
-    : carts.length >= PAGE_SIZE;
+  // hasNextPage is updated from the latest page response.
+
 
   /*
    * ---------------------------------------------------------
@@ -816,7 +856,7 @@ export default function AbandonCartsPage() {
               <p className="text-xs text-muted-foreground">{t.abandonedCarts.filtersDescription}</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
 
             {/* START DATE */}
             <div className="space-y-1.5">
@@ -829,7 +869,7 @@ export default function AbandonCartsPage() {
                 onChange={(event) => {
                   const value = event.target.value;
                   setInputStartDate(value);
-                  applyFilters(value, inputEndDate, status);
+                  void applyFilters(value, inputEndDate, status);
                 }}
                 className="w-full rounded-lg bg-background/70 text-right"
                 dir="ltr"
@@ -847,7 +887,7 @@ export default function AbandonCartsPage() {
                 onChange={(event) => {
                   const value = event.target.value;
                   setInputEndDate(value);
-                  applyFilters(inputStartDate, value, status);
+                  void applyFilters(inputStartDate, value, status);
                 }}
                 className="w-full rounded-lg bg-background/70 text-right"
                 dir="ltr"
@@ -868,7 +908,7 @@ export default function AbandonCartsPage() {
                       : (value as CartStatus);
 
                   setStatus(nextStatus);
-                  applyFilters(
+                  void applyFilters(
                     inputStartDate,
                     inputEndDate,
                     nextStatus
@@ -890,9 +930,27 @@ export default function AbandonCartsPage() {
               </Select>
             </div>
 
+
+            {/* SEARCH */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">
+                {t.common.search}
+              </Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={t.common.search}
+                  className="w-full rounded-lg bg-background/70 pl-9"
+                  dir="auto"
+                />
+              </div>
+            </div>
+
             {/* FILTER ACTIONS */}
             <div className="flex flex-wrap items-center justify-end gap-2 sm:col-span-2 lg:col-span-1 rtl:flex-row-reverse">
-              {(inputStartDate || inputEndDate || status) && (
+              {(inputStartDate || inputEndDate || status || search) && (
                 <Button
                   variant="ghost"
                   className="px-3"
@@ -1049,7 +1107,7 @@ export default function AbandonCartsPage() {
                 </th>
 
                 <th className="px-6 py-3 font-medium">
-                  Rule ID
+                 {t.reminderRules.ruleId} 
                 </th>
 
                 <th className="px-6 py-3 font-medium text-right">
@@ -1085,7 +1143,7 @@ export default function AbandonCartsPage() {
                   </td>
                 </tr>
 
-              ) : carts.length === 0 ? (
+              ) : filteredCarts.length === 0 ? (
 
                 <tr>
                   <td
@@ -1112,7 +1170,7 @@ export default function AbandonCartsPage() {
 
               ) : (
 
-                carts.map((cart) => (
+                filteredCarts.map((cart) => (
 
                   <tr
                     key={
@@ -1256,70 +1314,38 @@ export default function AbandonCartsPage() {
             PAGINATION
         ================================================== */}
 
-        <div className="flex items-center justify-between border-t border-border px-6 py-3">
+        {carts && carts.length > 0 && (
+          <div className="flex items-center justify-between border-t border-border px-6 py-3">
+            <span className="text-xs text-muted-foreground">
+              {t.abandonedCarts.page} {page}
+              {cartsPage?.totalPagesKnown
+                ? ` / ${cartsPage.totalPages}`
+                : ''}
+            </span>
 
-          <span className="text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(page - 1)}
+                disabled={page <= 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1 rtl:rotate-180" />
+                {t.abandonedCarts.previous}
+              </Button>
 
-            {t.abandonedCarts.page}{' '}
-            {page}
-
-            {cartsPage?.totalPages
-              ? ` / ${cartsPage.totalPages}`
-              : ''}
-
-          </span>
-
-          <div className="flex items-center gap-2">
-
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={
-                page <= 1 ||
-                isLoading
-              }
-              onClick={() =>
-                setPage((current) =>
-                  Math.max(
-                    1,
-                    current - 1
-                  )
-                )
-              }
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-
-              {
-                t.abandonedCarts
-                  .previous
-              }
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={
-                isLoading ||
-                !hasNextPage
-              }
-              onClick={() =>
-                setPage(
-                  (current) =>
-                    current + 1
-                )
-              }
-            >
-              {
-                t.abandonedCarts
-                  .next
-              }
-
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => goToPage(page + 1)}
+                disabled={isLoading || !hasNextPage}
+              >
+                {t.abandonedCarts.next}
+                <ChevronRight className="h-4 w-4 ml-1 rtl:rotate-180" />
+              </Button>
+            </div>
           </div>
-
-        </div>
+        )}
 
       </div>
 
@@ -1410,7 +1436,7 @@ export default function AbandonCartsPage() {
               <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
 
                 <span className="text-muted-foreground">
-                  Rule ID
+                 {t.reminderRules.ruleId}
                 </span>
 
                 <span className="font-mono font-semibold">
@@ -1616,9 +1642,7 @@ export default function AbandonCartsPage() {
                         </span>
 
                         <span className="text-xs text-muted-foreground">
-                          Rule ID:{' '}
-                          {cart.ruleId ??
-                            '—'}
+                         {t.reminderRules.ruleId}
                         </span>
 
                       </div>
@@ -1667,7 +1691,7 @@ export default function AbandonCartsPage() {
             <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm">
 
               <span className="text-muted-foreground">
-                Rule ID
+              {t.reminderRules.ruleId}
               </span>
 
               <span className="font-mono font-semibold">

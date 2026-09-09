@@ -2,6 +2,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useRef,
   useState,
 } from "react";
 
@@ -106,6 +107,7 @@ export interface GetMerchantCartsRequest {
    */
   startDate?: string;
   endDate?: string;
+  search?: string;
 
   /*
    * Optional status filter.
@@ -142,6 +144,8 @@ export interface PagedResponse<T> {
   size: number;
   totalElements: number;
   totalPages: number;
+  hasNextPage?: boolean;
+  totalPagesKnown?: boolean;
 }
 
 export interface SendReminderRequest {
@@ -254,6 +258,10 @@ export function MerchantProvider({
   const [isLoadingOrders, setIsLoadingOrders] =
     useState(false);
 
+  // Prevent older cart/order requests from overwriting newer data.
+  const cartsRequestIdRef = useRef(0);
+  const ordersRequestIdRef = useRef(0);
+
   const [dashboard, setDashboard] =
     useState<MerchantDashboard | null>(null);
 
@@ -358,10 +366,13 @@ export function MerchantProvider({
       merchantId,
       startDate,
       endDate,
+      search,
       status,
       page = 1,
       size = 20,
     }: GetMerchantCartsRequest) => {
+      const requestId = ++cartsRequestIdRef.current;
+
       try {
         setIsLoading(true);
 
@@ -396,6 +407,10 @@ export function MerchantProvider({
             "endDate",
             endDate
           );
+        }
+
+        if (search) {
+          params.append("search", search.trim());
         }
 
         /*
@@ -453,26 +468,18 @@ export function MerchantProvider({
             content: raw,
             page,
             size,
-
-            /*
-             * This is only an estimate because
-             * the backend doesn't return totalElements.
-             */
-
             totalElements:
-              hasFullPage
-                ? page * size + 1
-                : (page - 1) * size +
-                  raw.length,
-
-            totalPages:
-              hasFullPage
-                ? page + 1
-                : page,
+              (page - 1) * size + raw.length,
+            totalPages: page,
+            hasNextPage: hasFullPage,
+            totalPagesKnown: false,
           };
         } else {
           result =
             raw as PagedResponse<AbandonedCart>;
+          result.hasNextPage =
+            result.page < result.totalPages;
+          result.totalPagesKnown = true;
         }
 
         const normalizedContent = (
@@ -487,12 +494,21 @@ export function MerchantProvider({
           content: normalizedContent,
         };
 
+        // Ignore stale responses from older search/filter/page requests.
+        if (requestId !== cartsRequestIdRef.current) {
+          return null;
+        }
+
         setCarts(normalizedContent);
 
         setCartsPage(result);
 
         return result;
       } catch (error) {
+        if (requestId !== cartsRequestIdRef.current) {
+          return null;
+        }
+
         console.error(
           "Failed to load carts:",
           error
@@ -504,7 +520,9 @@ export function MerchantProvider({
 
         return null;
       } finally {
-        setIsLoading(false);
+        if (requestId === cartsRequestIdRef.current) {
+          setIsLoading(false);
+        }
       }
     },
     [API_BASE_URL, user?.token]
@@ -647,11 +665,12 @@ export function MerchantProvider({
       page = 1,
       size = 20,
     }: GetMerchantOrdersRequest) => {
+      const requestId = ++ordersRequestIdRef.current;
+
       try {
         setIsLoadingOrders(true);
 
-        const params =
-          new URLSearchParams();
+        const params = new URLSearchParams();
 
         params.append(
           "merchantId",
@@ -659,28 +678,15 @@ export function MerchantProvider({
         );
 
         if (startDate) {
-          params.append(
-            "startDate",
-            startDate
-          );
+          params.append("startDate", startDate);
         }
 
         if (endDate) {
-          params.append(
-            "endDate",
-            endDate
-          );
+          params.append("endDate", endDate);
         }
 
-        params.append(
-          "page",
-          page.toString()
-        );
-
-        params.append(
-          "size",
-          size.toString()
-        );
+        params.append("page", page.toString());
+        params.append("size", size.toString());
 
         const response = await fetch(
           `${API_BASE_URL}/merchant/orders?${params.toString()}`,
@@ -690,58 +696,61 @@ export function MerchantProvider({
         );
 
         if (!response.ok) {
-          throw new Error(
-            await response.text()
-          );
+          throw new Error(await response.text());
         }
 
-        const raw =
-          await response.json();
+        const raw = await response.json();
 
         let result: PagedResponse<Order>;
 
         if (Array.isArray(raw)) {
-          const hasFullPage =
-            raw.length === size;
+          const hasNextPage = raw.length === size;
 
           result = {
             content: raw,
             page,
             size,
-
-            totalElements:
-              hasFullPage
-                ? page * size + 1
-                : (page - 1) * size +
-                  raw.length,
-
-            totalPages:
-              hasFullPage
-                ? page + 1
-                : page,
+            totalElements: (page - 1) * size + raw.length,
+            totalPages: page,
+            hasNextPage,
+            totalPagesKnown: false,
           };
         } else {
-          result =
-            raw as PagedResponse<Order>;
+          const apiResult = raw as PagedResponse<Order>;
+
+          result = {
+            ...apiResult,
+            hasNextPage:
+              apiResult.hasNextPage ??
+              apiResult.page < apiResult.totalPages,
+            totalPagesKnown: true,
+          };
         }
 
-        setOrders(
-          result.content ?? []
-        );
+        // Ignore stale responses from previous page/filter requests.
+        if (requestId !== ordersRequestIdRef.current) {
+          return null;
+        }
 
+        setOrders(result.content ?? []);
         setOrdersPage(result);
 
         return result;
       } catch (error) {
+        // Do not let an old request clear the latest page.
+        if (requestId !== ordersRequestIdRef.current) {
+          return null;
+        }
+
         console.error(error);
-
         setOrders([]);
-
         setOrdersPage(null);
 
         return null;
       } finally {
-        setIsLoadingOrders(false);
+        if (requestId === ordersRequestIdRef.current) {
+          setIsLoadingOrders(false);
+        }
       }
     },
     [API_BASE_URL, user?.token]

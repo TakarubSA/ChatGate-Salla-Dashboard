@@ -33,7 +33,7 @@ function ProtectedRoutes() {
       <Switch>
         <Route path="/" component={DashboardPage} />
         <Route path="/orders" component={OrdersPage} />
-        <Route path="/templates" component={TemplatesPage} />
+        {/* <Route path="/templates" component={TemplatesPage} /> */}
         {/* <Route path="/campaigns" component={CampaignsPage} /> */}
         <Route path="/abandon-carts" component={AbandonCartsPage} />
 <Route path="/reminder-rules" component={ReminderRulesPage} />
