@@ -1099,12 +1099,12 @@ export default function AbandonCartsPage() {
                   }
                 </th>
 
-                <th className="px-6 py-3 font-medium">
+                {/* <th className="px-6 py-3 font-medium">
                   {
                     t.abandonedCarts
                       .sendCount
                   }
-                </th>
+                </th> */}
 
                 <th className="px-6 py-3 font-medium">
                  {t.reminderRules.ruleId} 
@@ -1242,7 +1242,7 @@ export default function AbandonCartsPage() {
                       {getStatusBadge(cart)}
                     </td>
 
-                    <td className="px-6 py-3 text-muted-foreground">
+                    {/* <td className="px-6 py-3 text-muted-foreground">
                       <div className="flex items-center gap-1.5">
                         <Send className="h-3.5 w-3.5" />
 
@@ -1250,7 +1250,7 @@ export default function AbandonCartsPage() {
                           cart.sendCount
                         }
                       </div>
-                    </td>
+                    </td> */}
 
                     <td className="px-6 py-3">
                       {cart.ruleId != null &&
