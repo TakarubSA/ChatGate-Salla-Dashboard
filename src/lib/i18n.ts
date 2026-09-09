@@ -273,6 +273,49 @@ export const translations = {
       logout: 'Log out',
     },
     dashboard: {
+        dashboardLabel: 'Dashboard',
+
+  overview: 'Overview',
+
+  overviewDescription:
+    'Your ChatGate performance for the selected period.',
+
+  last7Days: 'Last 7 Days',
+
+  last14Days: 'Last 14 Days',
+
+  last30Days: 'Last 30 Days',
+
+  successfulReminders:
+    'Successful Reminders',
+
+  failedReminders:
+    'Failed Reminders',
+
+  recentOrdersDescription:
+    'Recent orders from the selected period.',
+
+  recentAbandonedDescription:
+    'Recent abandoned carts from the selected period.',
+
+  noRecentOrders:
+    'No recent orders',
+
+  noRecentAbandonedCarts:
+    'No recent abandoned carts',
+
+  noOrdersInPeriod:
+    'No orders were created during this period.',
+
+  noAbandonedInPeriod:
+    'No abandoned carts were found during this period.',
+
+  exportOrders:
+    'Export Orders',
+      status: 'Status',
+allStatuses: 'All statuses',
+statusActive: 'Active',
+statusPurchased: 'Purchased',
       title: 'Dashboard',
       subtitle: 'Monitor and recover slipping revenue.',
       totalAbandoned: 'Total Abandoned',
@@ -287,7 +330,6 @@ export const translations = {
       searchCustomer: 'Search customer...',
       customer: 'Customer',
       cartValue: 'Cart Value',
-      status: 'Status',
       timing: 'Timing',
       action: 'Action',
       remind: 'Remind',
@@ -431,6 +473,11 @@ image: 'Image',
 },
     
     orders: {
+      orderNumber:"Order number",
+      filtersTitle: 'Filters',
+      filtersDescription: 'Narrow down orders by date.',
+      appliedFilters: 'Applied filters:',
+      any: 'Any',
       title: 'Orders',
       subtitle: 'Track conversions and total sales performance.',
       totalRevenue: 'Total Revenue',
@@ -494,6 +541,8 @@ image: 'Image',
   qty: 'Qty',
     },
     abandonedCarts: {
+      appliedFilters:"Applied filters",
+      viewAll:"View all",
       sendSelected:"Send Selected",
       sendReminder:"Send Reminder",
       loadCarts:"load carts",
@@ -831,6 +880,49 @@ settings: {
   },
 
   dashboard: {
+      dashboardLabel: 'لوحة التحكم',
+
+  overview: 'نظرة عامة',
+
+  overviewDescription:
+    'أداء ChatGate خلال الفترة المحددة.',
+
+  last7Days: 'آخر 7 أيام',
+
+  last14Days: 'آخر 14 يومًا',
+
+  last30Days: 'آخر 30 يومًا',
+
+  successfulReminders:
+    'التذكيرات الناجحة',
+
+  failedReminders:
+    'التذكيرات الفاشلة',
+
+  recentOrdersDescription:
+    'أحدث الطلبات خلال الفترة المحددة.',
+
+  recentAbandonedDescription:
+    'أحدث السلات المتروكة خلال الفترة المحددة.',
+
+  noRecentOrders:
+    'لا توجد طلبات حديثة',
+
+  noRecentAbandonedCarts:
+    'لا توجد سلات متروكة حديثة',
+
+  noOrdersInPeriod:
+    'لم يتم إنشاء أي طلبات خلال هذه الفترة.',
+
+  noAbandonedInPeriod:
+    'لم يتم العثور على أي سلات متروكة خلال هذه الفترة.',
+
+  exportOrders:
+    'تصدير الطلبات',
+    status: 'الحالة',
+allStatuses: 'كل الحالات',
+statusActive: 'نشطة',
+statusPurchased: 'تم الشراء',
     title: 'لوحة التحكم',
     subtitle: 'تابع أداء المبيعات واستعد الإيرادات من السلات المتروكة.',
     
@@ -850,7 +942,6 @@ settings: {
     searchCustomer: 'البحث عن عميل...',
     customer: 'العميل',
     cartValue: 'قيمة السلة',
-    status: 'الحالة',
     timing: 'التوقيت',
     action: 'الإجراء',
     remind: 'إرسال تذكير',
@@ -886,8 +977,6 @@ settings: {
     expired: 'منتهي',
     
     loading: 'جارٍ التحميل...',
-    noRecentOrders: 'لا توجد طلبات حديثة',
-    noRecentAbandonedCarts: 'لا توجد سلات متروكة حديثة',
     deliveryErrors: 'طلبات بها أخطاء في التسليم',
   },
 
@@ -1085,6 +1174,11 @@ settings: {
  },
 
    orders: {
+    orderNumber:"رقم الطلب",
+      filtersTitle: 'عوامل التصفية',
+      filtersDescription: 'تصفية الطلبات حسب التاريخ.',
+      appliedFilters: 'عوامل التصفية المطبقة:',
+      any: 'الكل',
     title: 'الطلبات',
     subtitle: 'تتبع التحويلات وأداء المبيعات الإجمالي.',
 
@@ -1164,6 +1258,8 @@ settings: {
   },
 
   abandonedCarts: {
+    appliedFilters:"التصفية المطبقه",
+    viewAll:"عرض الكل",
     sendSelected: 'تذكير بالمختارين',
     sendReminder: 'إرسال تذكير',
     loadCarts: 'تحميل السلات',
@@ -1203,7 +1299,7 @@ settings: {
     viewCheckout: 'عرض صفحة الدفع',
 
     failedToLoad: 'تعذر تحميل تفاصيل السلة.',
-
+    allStatuses: 'كل الحالات',
     statusActive: 'نشطة',
     reminder_sent:"تم ارسال التذكير",
     statusPurchased:"تم الشراء",

@@ -16,13 +16,7 @@ export interface AbandonedCart {
   customerEmail: string;
   customerMobile: string;
   checkoutUrl: string;
-  status:
-    | "active"
-    | "notified"
-    | "order_created"
-    | "expired"
-    | "reminder_sent"
-    | "purchased";
+  status: "active" | "purchased";
   sendCount: number;
   total: number;
   currency: string;
@@ -31,7 +25,13 @@ export interface AbandonedCart {
   expiredDate: string | null;
   nextSendAt: string | null;
   lastSentAt: string | null;
-  ruleId: string | number;
+
+  // Exact rule associated with this abandoned-cart notification.
+  ruleId: number | null;
+
+  // Exact reminder task associated with this notification.
+  reminderTaskId: number | null;
+
   schedulerStatus:
     | "pending"
     | "stopped"
@@ -75,6 +75,28 @@ export interface MerchantDashboard {
   latestAbandoned: AbandonedCart[];
 }
 
+export type CartStatus = "active" | "purchased";
+
+/**
+ * Normalize every backend/Salla cart status to the two statuses
+ * supported by the UI: active or purchased.
+ */
+export const getCartStatus = (cart: any): CartStatus => {
+  const rawStatus = String(cart?.status ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (
+    rawStatus === "purchased" ||
+    rawStatus === "recovered" ||
+    rawStatus === "order_created" ||
+    cart?.recovered === true
+  ) {
+    return "purchased";
+  }
+
+  return "active";
+};
 export interface GetMerchantCartsRequest {
   merchantId: number;
 
@@ -84,6 +106,17 @@ export interface GetMerchantCartsRequest {
    */
   startDate?: string;
   endDate?: string;
+
+  /*
+   * Optional status filter.
+   *
+   * Supported filter values:
+   * active
+   * purchased
+   *
+   * Backend statuses are normalized to active/purchased.
+   */
+  status?: CartStatus;
 
   page?: number;
   size?: number;
@@ -95,6 +128,12 @@ export interface GetMerchantOrdersRequest {
   endDate?: string;
   page?: number;
   size?: number;
+}
+
+export interface GetMerchantDashboardRequest {
+  merchantId: number;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface PagedResponse<T> {
@@ -116,6 +155,7 @@ export interface ExportAllCartsRequest {
   merchantId: number;
   startDate?: string;
   endDate?: string;
+  status?: CartStatus;
 }
 
 interface MerchantContextType {
@@ -157,7 +197,7 @@ interface MerchantContextType {
   isLoadingDashboard: boolean;
 
   loadDashboard: (
-    request: GetMerchantCartsRequest
+    request: GetMerchantDashboardRequest
   ) => Promise<MerchantDashboard | null>;
 
   clear: () => void;
@@ -282,6 +322,7 @@ export function MerchantProvider({
       merchantId,
       startDate,
       endDate,
+      status,
       page = 1,
       size = 20,
     }: GetMerchantCartsRequest) => {
@@ -321,6 +362,19 @@ export function MerchantProvider({
           );
         }
 
+        /*
+         * Status filter.
+         *
+         * Only send it when a status is selected.
+         */
+
+        if (status) {
+          params.append(
+            "status",
+            status
+          );
+        }
+
         params.append(
           "page",
           page.toString()
@@ -335,25 +389,8 @@ export function MerchantProvider({
           `${API_BASE_URL}/merchant/carts?${params.toString()}`,
           {
             method: "GET",
-            headers: {
-              Accept:
-                "application/json",
-
-              ...(user?.token && {
-                Authorization: `Bearer ${user.token}`,
-              }),
-            },
+            headers: authHeaders(user?.token),
           }
-        );
-
-        console.log(
-          "GET /merchant/carts:",
-          `${API_BASE_URL}/merchant/carts?${params.toString()}`
-        );
-
-        console.log(
-          "Response status:",
-          response.status
         );
 
         if (!response.ok) {
@@ -371,6 +408,7 @@ export function MerchantProvider({
         /*
          * Backend currently returns a raw array.
          */
+
         if (Array.isArray(raw)) {
           const hasFullPage =
             raw.length === size;
@@ -384,6 +422,7 @@ export function MerchantProvider({
              * This is only an estimate because
              * the backend doesn't return totalElements.
              */
+
             totalElements:
               hasFullPage
                 ? page * size + 1
@@ -400,9 +439,19 @@ export function MerchantProvider({
             raw as PagedResponse<AbandonedCart>;
         }
 
-        setCarts(
+        const normalizedContent = (
           result.content ?? []
-        );
+        ).map((cart) => ({
+          ...cart,
+          status: getCartStatus(cart),
+        }));
+
+        result = {
+          ...result,
+          content: normalizedContent,
+        };
+
+        setCarts(normalizedContent);
 
         setCartsPage(result);
 
@@ -440,6 +489,7 @@ export function MerchantProvider({
       merchantId,
       startDate,
       endDate,
+      status,
     }: ExportAllCartsRequest) => {
       const allCarts: AbandonedCart[] =
         [];
@@ -471,6 +521,17 @@ export function MerchantProvider({
           );
         }
 
+        /*
+         * Status filter for export.
+         */
+
+        if (status) {
+          params.append(
+            "status",
+            status
+          );
+        }
+
         params.append(
           "page",
           page.toString()
@@ -481,22 +542,11 @@ export function MerchantProvider({
           size.toString()
         );
 
-        console.log(
-          `Exporting carts page ${page}`
-        );
-
         const response = await fetch(
           `${API_BASE_URL}/merchant/carts?${params.toString()}`,
           {
             method: "GET",
-            headers: {
-              Accept:
-                "application/json",
-
-              ...(user?.token && {
-                Authorization: `Bearer ${user.token}`,
-              }),
-            },
+            headers: authHeaders(user?.token),
           }
         );
 
@@ -512,12 +562,17 @@ export function MerchantProvider({
         /*
          * Backend currently returns an array.
          */
+
         const pageCarts: AbandonedCart[] =
-          Array.isArray(raw)
+          (Array.isArray(raw)
             ? raw
             : (
                 raw as PagedResponse<AbandonedCart>
-              ).content ?? [];
+              ).content ?? []
+          ).map((cart) => ({
+            ...cart,
+            status: getCartStatus(cart),
+          }));
 
         allCarts.push(
           ...pageCarts
@@ -527,6 +582,7 @@ export function MerchantProvider({
          * If we received less than the page size,
          * there are no more pages.
          */
+
         if (
           pageCarts.length < size
         ) {
@@ -535,10 +591,6 @@ export function MerchantProvider({
 
         page += 1;
       }
-
-      console.log(
-        `Export collected ${allCarts.length} carts`
-      );
 
       return allCarts;
     },
@@ -597,20 +649,8 @@ export function MerchantProvider({
         const response = await fetch(
           `${API_BASE_URL}/merchant/orders?${params.toString()}`,
           {
-            headers: {
-              Accept:
-                "application/json",
-
-              ...(user?.token && {
-                Authorization: `Bearer ${user.token}`,
-              }),
-            },
+            headers: authHeaders(user?.token),
           }
-        );
-
-        console.log(
-          "Response status:",
-          response.status
         );
 
         if (!response.ok) {
@@ -622,10 +662,6 @@ export function MerchantProvider({
         const raw =
           await response.json();
 
-        console.log({
-          raw,
-        });
-
         let result: PagedResponse<Order>;
 
         if (Array.isArray(raw)) {
@@ -636,11 +672,13 @@ export function MerchantProvider({
             content: raw,
             page,
             size,
+
             totalElements:
               hasFullPage
                 ? page * size + 1
                 : (page - 1) * size +
                   raw.length,
+
             totalPages:
               hasFullPage
                 ? page + 1
@@ -684,7 +722,7 @@ export function MerchantProvider({
       merchantId,
       startDate,
       endDate,
-    }: GetMerchantCartsRequest) => {
+    }: GetMerchantDashboardRequest) => {
       try {
         setIsLoadingDashboard(true);
 
@@ -713,20 +751,8 @@ export function MerchantProvider({
         const response = await fetch(
           `${API_BASE_URL}/merchant/dashboard?${params.toString()}`,
           {
-            headers: {
-              Accept:
-                "application/json",
-
-              ...(user?.token && {
-                Authorization: `Bearer ${user.token}`,
-              }),
-            },
+            headers: authHeaders(user?.token),
           }
-        );
-
-        console.log(
-          "Response status:",
-          response.status
         );
 
         if (!response.ok) {
@@ -790,6 +816,7 @@ export function MerchantProvider({
         /*
          * Fetches ALL carts across all pages.
          */
+
         exportAllCarts,
 
         orders,

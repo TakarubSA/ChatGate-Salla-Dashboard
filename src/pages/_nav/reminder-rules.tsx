@@ -203,9 +203,9 @@ const updatePayload = {
           {rules.map((rule) => (
             <div
               key={rule.id}
-              className="border border-border bg-card rounded-xl p-5 flex flex-col gap-3"
+              className="border border-border/70 bg-card rounded-xl p-5 flex flex-col gap-3 shadow-sm"
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-4">
                 <div>
                   <h3 className="font-semibold text-foreground">
                     {t.reminderRules.reminderAfter} {rule.abandonedHours} {t.reminderRules.hours}
@@ -214,10 +214,19 @@ const updatePayload = {
                     {t.reminderRules.ruleId}: #{rule.id}
                   </p>
                 </div>
-                <Switch
-                  checked={rule.isActive}
-                  onCheckedChange={(checked) => handleToggleActive(rule, checked)}
-                />
+                <div dir="ltr" className="shrink-0">
+                  <Switch
+                    checked={rule.isActive}
+                    onCheckedChange={(checked) =>
+                      handleToggleActive(rule, checked)
+                    }
+                    aria-label={
+                      rule.isActive
+                        ? t.reminderRules.active
+                        : t.reminderRules.inactive
+                    }
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5 text-sm text-muted-foreground">

@@ -34,14 +34,14 @@ function ProtectedRoutes() {
         <Route path="/" component={DashboardPage} />
         <Route path="/orders" component={OrdersPage} />
         <Route path="/templates" component={TemplatesPage} />
-        <Route path="/campaigns" component={CampaignsPage} />
+        {/* <Route path="/campaigns" component={CampaignsPage} /> */}
         <Route path="/abandon-carts" component={AbandonCartsPage} />
 <Route path="/reminder-rules" component={ReminderRulesPage} />
-<Route path="/contacts" component={ImportContactsPage} />
-<Route path="/attributes" component={AttributesPage} />
-<Route path="/settings" component={SettingsPage} />
-        {isAdmin && <Route path="/reports" component={ReportsPage} />}
-        {isAdmin && <Route path="/team" component={TeamPage} />}
+{/* <Route path="/contacts" component={ImportContactsPage} /> */}
+{/* <Route path="/attributes" component={AttributesPage} /> */}
+{/* <Route path="/settings" component={SettingsPage} /> */}
+        {/* {isAdmin && <Route path="/reports" component={ReportsPage} />} */}
+        {/* {isAdmin && <Route path="/team" component={TeamPage} />} */}
        
 
         <Route component={NotFound} />

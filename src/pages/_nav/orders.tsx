@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import {
   Dialog,
@@ -13,7 +15,6 @@ import {
   ShoppingCart,
   RotateCcw,
   Clock,
-  Calendar,
   Hash,
   Package,
   ChevronLeft,
@@ -75,8 +76,8 @@ export default function OrdersPage() {
 
 
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
-  const [startDate, setStartDate] = useState();
-  const [endDate, setEndDate] = useState();
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   const [page, setPage] = useState(1);
 
   const fetchPage = (targetPage: number) => {
@@ -135,8 +136,8 @@ export default function OrdersPage() {
       'Orders'
     );
     toast({
-      title: 'Export successful',
-      description: 'Orders have been exported to Excel.',
+      title: t.orders.exportSuccessTitle,
+      description: t.orders.exportSuccessDescription,
     });
   };
 
@@ -148,7 +149,7 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
@@ -161,7 +162,7 @@ export default function OrdersPage() {
             variant="outline"
             size="sm"
             onClick={handleExport}
-            title="Exports the currently loaded page only"
+            title={t.orders.exportPageHint}
           >
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             {t.orders.exportPage}
@@ -169,55 +170,131 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex flex-col lg:flex-row items-end gap-4 justify-between">
-          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-            <div className="space-y-1">
-              <label>{t.orders.startDate}</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="pl-9 w-full sm:w-[180px]"
-                />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <label>{t.orders.endDate}</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="pl-9 w-full sm:w-[180px]"
-                />
-              </div>
+      {/* =====================================================
+          FILTERS
+      ====================================================== */}
+
+      <Card className="rounded-xl border-border/70 shadow-sm">
+        <CardContent className="p-4 sm:p-5">
+
+          <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                {t.orders.filtersTitle}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t.orders.filtersDescription}
+              </p>
             </div>
           </div>
-          <Button onClick={handleLoad} disabled={isLoadingOrders}>
-            {isLoadingOrders ? t.orders.loading : t.orders.loadOrdersButton}
-          </Button>
-        </div>
 
-        <div className="border border-border rounded-lg bg-card overflow-hidden">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+
+            {/* START DATE */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">
+                {t.orders.startDate}
+              </Label>
+
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(event) => setStartDate(event.target.value)}
+                className="w-full rounded-lg bg-background/70 text-right"
+                dir="ltr"
+              />
+            </div>
+
+            {/* END DATE */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">
+                {t.orders.endDate}
+              </Label>
+
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(event) => setEndDate(event.target.value)}
+                className="w-full rounded-lg bg-background/70 text-right"
+                dir="ltr"
+              />
+            </div>
+
+            <div className="hidden lg:block" />
+
+            {/* FILTER ACTIONS */}
+            <div className="flex flex-wrap items-center justify-end gap-2 sm:col-span-2 lg:col-span-1 rtl:flex-row-reverse">
+
+              {(startDate || endDate) && (
+                <Button
+                  variant="ghost"
+                  className="px-3"
+                  onClick={() => {
+                    setStartDate('');
+                    setEndDate('');
+                    setPage(1);
+
+                    if (user?.merchantId) {
+                      loadOrders({
+                        merchantId: user.merchantId,
+                        startDate: '',
+                        endDate: '',
+                        page: 1,
+                        size: PAGE_SIZE,
+                      });
+                    }
+                  }}
+                  disabled={isLoadingOrders}
+                >
+                  <RotateCcw className="h-4 w-4 mr-1.5" />
+                  {t.common.reset}
+                </Button>
+              )}
+
+              <Button
+                className="h-9 px-3 rounded-lg shadow-sm sm:flex-none"
+                onClick={handleLoad}
+                disabled={isLoadingOrders}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                {isLoadingOrders
+                  ? t.orders.loading
+                  : t.orders.loadOrdersButton}
+              </Button>
+            </div>
+          </div>
+
+          {(startDate || endDate) && (
+            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+              <span className="text-xs font-medium text-muted-foreground">
+                {t.orders.appliedFilters}
+              </span>
+
+              <span className="rounded-md bg-muted px-2.5 py-1 text-xs text-foreground">
+                {startDate || t.orders.any} → {endDate || t.orders.any}
+              </span>
+            </div>
+          )}
+
+        </CardContent>
+      </Card>
+
+        <div className="border border-border/70 rounded-xl bg-card overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-xs text-muted-foreground bg-muted/50 uppercase border-b border-border">
+              <thead className="text-[11px] tracking-wide text-muted-foreground bg-muted/40 uppercase border-b border-border/70">
                 <tr>
-                  <th className="px-6 py-3">{t.orders.order}</th>
-                  <th className="px-6 py-3">{t.orders.customer}</th>
-                  <th className="px-6 py-3">{t.orders.items}</th>
-                  <th className="px-6 py-3">{t.orders.total}</th>
-                  <th className="px-6 py-3 text-right">{t.orders.date}</th>
+                  <th className="px-6 py-3 font-medium">{t.orders.order}</th>
+                  <th className="px-6 py-3 font-medium">{t.orders.customer}</th>
+                  <th className="px-6 py-3 font-medium">{t.orders.items}</th>
+                  <th className="px-6 py-3 font-medium">{t.orders.total}</th>
+                  <th className="px-6 py-3 font-medium text-right">{t.orders.date}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {isLoadingOrders ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
+                    <td colSpan={5} className="px-6 py-10 text-center text-muted-foreground">
                       <div className="flex items-center justify-center">
                         <RotateCcw className="h-5 w-5 animate-spin mr-2" />
                         {t.orders.loading}
@@ -226,13 +303,13 @@ export default function OrdersPage() {
                   </tr>
                 ) : !orders || orders.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center">
+                    <td colSpan={5} className="px-6 py-10 text-center">
                       <ShoppingCart className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
                       <p className="text-muted-foreground font-medium">
-                        No orders found
+                        {t.orders.noOrdersFound}
                       </p>
                       <p className="text-xs text-muted-foreground/70 mt-1">
-                        Try adjusting your filters or date range
+                        {t.orders.noOrdersDescription}
                       </p>
                     </td>
                   </tr>
@@ -336,7 +413,6 @@ export default function OrdersPage() {
             </div>
           </div>
         )}
-      </div>
 
       <Dialog open={selectedOrderId !== null} onOpenChange={(open) => !open && setSelectedOrderId(null)}>
         <DialogContent className="sm:max-w-[560px]">
@@ -425,7 +501,7 @@ export default function OrdersPage() {
             </div>
           ) : (
             <div className="py-8 text-center text-muted-foreground">
-              Failed to load order details
+              {t.orders.failedToLoad}
             </div>
           )}
         </DialogContent>

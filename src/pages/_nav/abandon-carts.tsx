@@ -17,13 +17,19 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   FileSpreadsheet,
   ShoppingCart,
   RotateCcw,
   Clock,
   ExternalLink,
   Send,
-  Calendar,
   Tag,
   X,
   ChevronLeft,
@@ -37,6 +43,8 @@ import { exportToExcel } from '@/lib/export-excel';
 import {
   useMerchant,
   AbandonedCart,
+  CartStatus,
+  getCartStatus,
 } from '@/hooks/use-merchant';
 import { useAuth } from '@/hooks/use-auth';
 
@@ -44,6 +52,7 @@ const PAGE_SIZE = 20;
 
 type AbandonedCartWithRule = AbandonedCart & {
   ruleId?: number | string | null;
+  reminderTaskId?: number | string | null;
 };
 
 const fillTemplate = (
@@ -81,6 +90,9 @@ export default function AbandonCartsPage() {
 
   const [inputEndDate, setInputEndDate] =
     useState('');
+
+  const [status, setStatus] =
+    useState<CartStatus | ''>('');
 
   const [appliedStartDate, setAppliedStartDate] =
     useState<string | undefined>(undefined);
@@ -142,11 +154,16 @@ export default function AbandonCartsPage() {
     loadCarts({
       merchantId: user.merchantId,
 
-      /*
-       * Keep dates as strings.
-       */
       startDate: startDate || undefined,
+
       endDate: endDate || undefined,
+
+      /*
+       * Only:
+       * active
+       * purchased
+       */
+      status: status || undefined,
 
       page: targetPage,
       size: PAGE_SIZE,
@@ -223,6 +240,14 @@ export default function AbandonCartsPage() {
       merchantId: user.merchantId,
       startDate: nextStartDate,
       endDate: nextEndDate,
+
+      /*
+       * Status is either:
+       * active
+       * purchased
+       */
+      status: status || undefined,
+
       page: 1,
       size: PAGE_SIZE,
     });
@@ -239,6 +264,7 @@ export default function AbandonCartsPage() {
 
     setInputStartDate('');
     setInputEndDate('');
+    setStatus('');
 
     setAppliedStartDate(undefined);
     setAppliedEndDate(undefined);
@@ -344,11 +370,6 @@ export default function AbandonCartsPage() {
    * ---------------------------------------------------------
    * TARGET RULE ID
    * ---------------------------------------------------------
-   *
-   * The ruleId comes directly from the cart returned
-   * by the backend.
-   *
-   * All selected carts must belong to the same rule.
    */
 
   const targetRuleId = useMemo(() => {
@@ -356,28 +377,21 @@ export default function AbandonCartsPage() {
       return null;
     }
 
-    const ruleIds = targetCarts
-      .map((cart) => cart.ruleId)
-      .filter(
-        (ruleId) =>
-          ruleId !== null &&
-          ruleId !== undefined &&
-          String(ruleId).trim() !== ''
-      )
-      .map((ruleId) => String(ruleId));
+    const ruleId = targetCarts[0]?.ruleId;
 
-    if (ruleIds.length === 0) {
+    if (
+      ruleId === null ||
+      ruleId === undefined ||
+      ruleId === ''
+    ) {
       return null;
     }
 
-    const uniqueRuleIds =
-      Array.from(new Set(ruleIds));
+    const parsedRuleId = Number(ruleId);
 
-    if (uniqueRuleIds.length !== 1) {
-      return null;
-    }
-
-    return Number(uniqueRuleIds[0]);
+    return Number.isFinite(parsedRuleId)
+      ? parsedRuleId
+      : null;
   }, [targetCarts]);
 
   /*
@@ -421,38 +435,14 @@ export default function AbandonCartsPage() {
         cartIds.includes(cart.cartId)
       );
 
-    const ruleIds = selectedTargets
-      .map((cart) => cart.ruleId)
-      .filter(
-        (ruleId) =>
-          ruleId !== null &&
-          ruleId !== undefined &&
-          String(ruleId).trim() !== ''
-      )
-      .map((ruleId) => String(ruleId));
+    const hasRuleId = selectedTargets.some(
+      (cart) =>
+        cart.ruleId !== null &&
+        cart.ruleId !== undefined &&
+        cart.ruleId !== ''
+    );
 
-    const uniqueRuleIds =
-      Array.from(new Set(ruleIds));
-
-    /*
-     * Do not allow carts from different rules
-     * to be sent in the same request.
-     */
-    if (uniqueRuleIds.length > 1) {
-      toast({
-        variant: 'destructive',
-        title: 'Different rules selected',
-        description:
-          'Please select carts belonging to the same rule before sending reminders.',
-      });
-
-      return;
-    }
-
-    /*
-     * Rule ID is required for the ChatGate request.
-     */
-    if (uniqueRuleIds.length === 0) {
+    if (!hasRuleId) {
       toast({
         variant: 'destructive',
         title: 'Rule ID missing',
@@ -476,53 +466,51 @@ export default function AbandonCartsPage() {
   const handleConfirmSend = async () => {
     if (!sendTarget || !user) return;
 
-    /*
-     * Find the actual carts from the current page.
-     */
     const selectedTargets =
       (carts ?? []).filter((cart) =>
         sendTarget.includes(cart.cartId)
       );
 
-    /*
-     * Extract rule IDs.
-     */
     const ruleIds = selectedTargets
       .map((cart) => cart.ruleId)
       .filter(
-        (ruleId) =>
+        (ruleId): ruleId is number | string =>
           ruleId !== null &&
           ruleId !== undefined &&
-          String(ruleId).trim() !== ''
+          ruleId !== ''
       )
-      .map((ruleId) => String(ruleId));
+      .map((ruleId) => Number(ruleId))
+      .filter((ruleId) =>
+        Number.isFinite(ruleId)
+      );
 
-    const uniqueRuleIds =
-      Array.from(new Set(ruleIds));
-
-    /*
-     * Every cart in this request must belong
-     * to exactly one rule.
-     */
-    if (uniqueRuleIds.length !== 1) {
+    if (ruleIds.length === 0) {
       toast({
         variant: 'destructive',
-        title:
-          uniqueRuleIds.length === 0
-            ? 'Rule ID missing'
-            : 'Different rules selected',
+        title: 'Rule ID missing',
         description:
-          uniqueRuleIds.length === 0
-            ? 'The selected carts do not have a valid rule ID.'
-            : 'Please select carts belonging to the same rule before sending reminders.',
+          'The selected cart does not have a rule ID.',
       });
 
       return;
     }
 
-    const ruleId = Number(
-      uniqueRuleIds[0]
+    const uniqueRuleIds = Array.from(
+      new Set(ruleIds)
     );
+
+    if (uniqueRuleIds.length !== 1) {
+      toast({
+        variant: 'destructive',
+        title: 'Different rules selected',
+        description:
+          'Please select carts that belong to the same rule.',
+      });
+
+      return;
+    }
+
+    const ruleId = uniqueRuleIds[0];
 
     if (!Number.isFinite(ruleId)) {
       toast({
@@ -581,9 +569,6 @@ export default function AbandonCartsPage() {
         setSendTarget(null);
         setSelectedCartId(null);
 
-        /*
-         * Refresh current page.
-         */
         fetchCarts(page);
       } else {
         toast({
@@ -644,6 +629,16 @@ export default function AbandonCartsPage() {
           endDate:
             appliedEndDate ||
             undefined,
+
+          /*
+           * Export the selected status too.
+           *
+           * active
+           * purchased
+           */
+          status:
+            status ||
+            undefined,
         });
 
       if (!allCarts?.length) {
@@ -665,7 +660,7 @@ export default function AbandonCartsPage() {
           Mobile: cart.customerMobile,
           Total: cart.total,
           Currency: cart.currency,
-          Status: cart.status,
+          Status: getCartStatus(cart),
           SendCount: cart.sendCount,
           RuleId: cart.ruleId ?? '',
           CreatedAt: cart.createdAt,
@@ -727,76 +722,23 @@ export default function AbandonCartsPage() {
   };
 
   const getStatusBadge = (
-    status: AbandonedCart['status']
+    cart: AbandonedCart
   ) => {
-    switch (status) {
-      case 'reminder_sent':
-        return (
-          <Badge variant="secondary">
-            {
-              t.abandonedCarts
-                .reminder_sent
-            }
-          </Badge>
-        );
+    const normalizedStatus = getCartStatus(cart);
 
-      case 'active':
-        return (
-          <Badge variant="secondary">
-            {
-              t.abandonedCarts
-                .statusActive
-            }
-          </Badge>
-        );
-
-      case 'notified':
-        return (
-          <Badge className="bg-blue-500/15 text-blue-600 hover:bg-blue-500/15 border-transparent">
-            {
-              t.abandonedCarts
-                .statusNotified
-            }
-          </Badge>
-        );
-
-      case 'purchased':
-        return (
-          <Badge className="bg-green-500/15 text-green-600 hover:bg-green-500/15 border-transparent">
-            {
-              t.abandonedCarts
-                .statusPurchased
-            }
-          </Badge>
-        );
-
-      case 'order_created':
-        return (
-          <Badge className="bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15 border-transparent">
-            {
-              t.abandonedCarts
-                .statusRecovered
-            }
-          </Badge>
-        );
-
-      case 'expired':
-        return (
-          <Badge variant="destructive">
-            {
-              t.abandonedCarts
-                .statusExpired
-            }
-          </Badge>
-        );
-
-      default:
-        return (
-          <Badge variant="outline">
-            {status}
-          </Badge>
-        );
+    if (normalizedStatus === 'purchased') {
+      return (
+        <Badge className="bg-green-500/15 text-green-600 hover:bg-green-500/15 border-transparent">
+          {t.abandonedCarts.statusPurchased}
+        </Badge>
+      );
     }
+
+    return (
+      <Badge variant="secondary">
+        {t.abandonedCarts.statusActive}
+      </Badge>
+    );
   };
 
   /*
@@ -870,113 +812,124 @@ export default function AbandonCartsPage() {
           FILTERS
       ====================================================== */}
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col lg:flex-row lg:items-end gap-4 justify-between">
+      <Card className="rounded-xl border-border/70 shadow-sm">
+        <CardContent className="p-4 sm:p-5">
+          <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">{t.abandonedCarts.filtersTitle}</p>
+              <p className="text-xs text-muted-foreground">{t.abandonedCarts.filtersDescription}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
 
-            <div className="flex flex-col sm:flex-row gap-4">
+            {/* START DATE */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">
+                {t.orders.startDate}
+              </Label>
+              <Input
+                type="date"
+                value={inputStartDate}
+                onChange={(event) =>
+                  setInputStartDate(event.target.value)
+                }
+                className="w-full rounded-lg bg-background/70 text-right"
+                dir="ltr"
+              />
+            </div>
 
-              {/* START DATE */}
+            {/* END DATE */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">
+                {t.orders.endDate}
+              </Label>
+              <Input
+                type="date"
+                value={inputEndDate}
+                onChange={(event) =>
+                  setInputEndDate(event.target.value)
+                }
+                className="w-full rounded-lg bg-background/70 text-right"
+                dir="ltr"
+              />
+            </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">
-                  {t.orders.startDate}
-                </Label>
-
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-
-                  <Input
-                    type="date"
-                    value={
-                      inputStartDate
-                    }
-                    onChange={(event) =>
-                      setInputStartDate(
-                        event.target.value
-                      )
-                    }
-                    className="pl-9 w-[180px]"
-                  />
-                </div>
-              </div>
-
-              {/* END DATE */}
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">
-                  {t.orders.endDate}
-                </Label>
-
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-
-                  <Input
-                    type="date"
-                    value={
-                      inputEndDate
-                    }
-                    onChange={(event) =>
-                      setInputEndDate(
-                        event.target.value
-                      )
-                    }
-                    className="pl-9 w-[180px]"
-                  />
-                </div>
-              </div>
+            {/* STATUS */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">
+                {t.dashboard.status}
+              </Label>
+              <Select
+                value={status || 'all'}
+                onValueChange={(value) =>
+                  setStatus(
+                    value === 'all'
+                      ? ''
+                      : (value as CartStatus)
+                  )
+                }
+              >
+                <SelectTrigger className="w-full rounded-lg bg-background/70 ltr:text-left rtl:text-right">
+                  <SelectValue placeholder={t.abandonedCarts.viewAll} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.abandonedCarts.viewAll}</SelectItem>
+                  <SelectItem value="purchased">
+                    {t.abandonedCarts.statusPurchased}
+                  </SelectItem>
+                  <SelectItem value="active">
+                    {t.abandonedCarts.statusActive}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* FILTER ACTIONS */}
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={
-                  handleResetFilters
-                }
-                disabled={isLoading}
-              >
-                <X className="h-4 w-4 mr-2" />
-
-                {t.common.reset ??
-                  'Reset'}
-              </Button>
+            <div className="flex flex-wrap items-center justify-end gap-2 sm:col-span-2 lg:col-span-1 rtl:flex-row-reverse">
+              {(inputStartDate || inputEndDate || status) && (
+                <Button
+                  variant="ghost"
+                  className="px-3"
+                  onClick={handleResetFilters}
+                  disabled={isLoading}
+                >
+                  <X className="h-4 w-4 mr-1.5" />
+                  {t.common.reset ?? 'Reset'}
+                </Button>
+              )}
 
               <Button
+                className="h-9 px-3 rounded-lg shadow-sm sm:flex-none"
                 onClick={handleLoad}
                 disabled={isLoading}
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
-
                 {isLoading
-                  ? 'Loading...'
-                  : t.abandonedCarts
-                      .loadCarts}
+                  ? t.abandonedCarts.loadingCarts
+                  : t.abandonedCarts.loadCarts}
               </Button>
             </div>
           </div>
 
-          {/* APPLIED FILTER DISPLAY */}
-
-          {(appliedStartDate ||
-            appliedEndDate) && (
-            <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-              <span>
-                Applied:
+          {(appliedStartDate || appliedEndDate || status) && (
+            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+              <span className="text-xs font-medium text-muted-foreground">
+                {t.abandonedCarts.appliedFilters}
               </span>
 
-              <span className="font-medium text-foreground">
-                {appliedStartDate ??
-                  'Any'}
-              </span>
+              {(appliedStartDate || appliedEndDate) && (
+                <Badge variant="secondary" className="rounded-md font-normal">
+                  {appliedStartDate ?? t.abandonedCarts.any} → {appliedEndDate ?? t.abandonedCarts.any}
+                </Badge>
+              )}
 
-              <span>→</span>
-
-              <span className="font-medium text-foreground">
-                {appliedEndDate ??
-                  'Any'}
-              </span>
+              {status && (
+                <Badge variant="secondary" className="rounded-md font-normal">
+                  {status === 'purchased'
+                    ? t.abandonedCarts.statusPurchased
+                    : t.abandonedCarts.statusActive}
+                </Badge>
+              )}
             </div>
           )}
         </CardContent>
@@ -1010,7 +963,10 @@ export default function AbandonCartsPage() {
             >
               <X className="h-4 w-4 mr-1.5" />
 
-              {t.abandonedCarts.clear}
+              {
+                t.abandonedCarts
+                  .clear
+              }
             </Button>
 
             <Button
@@ -1028,6 +984,7 @@ export default function AbandonCartsPage() {
                   .sendReminder
               }
             </Button>
+
           </div>
         </div>
       )}
@@ -1036,13 +993,14 @@ export default function AbandonCartsPage() {
           TABLE
       ====================================================== */}
 
-      <div className="border border-border rounded-lg bg-card overflow-hidden">
+      <div className="border border-border/70 rounded-xl bg-card overflow-hidden shadow-sm">
 
         <div className="overflow-x-auto">
 
           <table className="w-full text-sm text-left">
 
-            <thead className="text-xs text-muted-foreground bg-muted/50 uppercase border-b border-border">
+            <thead className="text-[11px] tracking-wide text-muted-foreground bg-muted/40 uppercase border-b border-border/70">
+
               <tr>
 
                 <th className="w-12 px-4 py-3">
@@ -1109,6 +1067,7 @@ export default function AbandonCartsPage() {
                 <th className="px-6 py-3 font-medium text-right" />
 
               </tr>
+
             </thead>
 
             <tbody className="divide-y divide-border">
@@ -1161,13 +1120,15 @@ export default function AbandonCartsPage() {
                 carts.map((cart) => (
 
                   <tr
-                    key={cart.cartId}
+                    key={
+                      cart.cartId
+                    }
                     className={`group transition-colors ${
                       selectedCartIds.includes(
                         cart.cartId
                       )
                         ? 'bg-primary/5'
-                        : 'hover:bg-muted/30'
+                        : 'hover:bg-muted/20'
                     }`}
                   >
 
@@ -1225,9 +1186,7 @@ export default function AbandonCartsPage() {
                     </td>
 
                     <td className="px-6 py-3">
-                      {getStatusBadge(
-                        cart.status
-                      )}
+                      {getStatusBadge(cart)}
                     </td>
 
                     <td className="px-6 py-3 text-muted-foreground">
@@ -1241,12 +1200,17 @@ export default function AbandonCartsPage() {
                     </td>
 
                     <td className="px-6 py-3">
-                      {cart.ruleId != null ? (
+                      {cart.ruleId != null &&
+                      String(
+                        cart.ruleId
+                      ).trim() !== '' ? (
                         <Badge
                           variant="outline"
                           className="font-mono"
                         >
-                          {cart.ruleId}
+                          {
+                            cart.ruleId
+                          }
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground">
@@ -1288,7 +1252,9 @@ export default function AbandonCartsPage() {
               )}
 
             </tbody>
+
           </table>
+
         </div>
 
         {/* =================================================
@@ -1357,7 +1323,9 @@ export default function AbandonCartsPage() {
             </Button>
 
           </div>
+
         </div>
+
       </div>
 
       {/* =====================================================
@@ -1391,9 +1359,7 @@ export default function AbandonCartsPage() {
               </span>
 
               {selectedCart &&
-                getStatusBadge(
-                  selectedCart.status
-                )}
+                getStatusBadge(selectedCart)}
 
             </DialogTitle>
 
@@ -1441,6 +1407,7 @@ export default function AbandonCartsPage() {
                     }
 
                   </div>
+
                 </div>
 
               </div>
@@ -1579,6 +1546,7 @@ export default function AbandonCartsPage() {
           )}
 
         </DialogContent>
+
       </Dialog>
 
       {/* =====================================================
@@ -1780,7 +1748,8 @@ export default function AbandonCartsPage() {
               }
               disabled={
                 isSending ||
-                targetRuleId === null
+                targetRuleId ===
+                  null
               }
             >
 
@@ -1818,6 +1787,7 @@ export default function AbandonCartsPage() {
           </DialogFooter>
 
         </DialogContent>
+
       </Dialog>
 
     </div>
